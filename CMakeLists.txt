@@ -28,7 +28,7 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(FS26-DAQ C CXX ASM)
+project(FS27-DAQ C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -52,24 +52,24 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(FS26-DAQ 
+add_executable(FS27-DAQ
     FS26-DAQ_fs27.c
-    gps.c      # <--- Check if this is named gps.c in your folder!
+    gps.c
     lr1121_config.c
     lr1121_tx.c
     can_handler_fs27.c
     ft550_decoder.c
 )
 
-pico_set_program_name(FS26-DAQ "FS26-DAQ")
-pico_set_program_version(FS26-DAQ "0.1")
+pico_set_program_name(FS27-DAQ "FS27-DAQ")
+pico_set_program_version(FS27-DAQ "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(FS26-DAQ 0)
-pico_enable_stdio_usb(FS26-DAQ 1)
+pico_enable_stdio_uart(FS27-DAQ 0)
+pico_enable_stdio_usb(FS27-DAQ 1)
 
 # 2. Add pico_multicore here to fix the 'multicore_launch_core1' error
-target_link_libraries(FS26-DAQ
+target_link_libraries(FS27-DAQ
         pico_stdlib
         pico_multicore
         gpio
@@ -79,9 +79,9 @@ target_link_libraries(FS26-DAQ
 )
 
 # Add the standard include files to the build
-target_include_directories(FS26-DAQ PRIVATE
+target_include_directories(FS27-DAQ PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
 
-pico_add_extra_outputs(FS26-DAQ)
+pico_add_extra_outputs(FS27-DAQ)
 

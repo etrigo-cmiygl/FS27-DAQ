@@ -1,7 +1,8 @@
-# FS26-DAQ Wiki
+# FS27-DAQ Wiki
 
-FS26-DAQ is a dual-core telemetry data-acquisition system for the FS26 Leeds Gryphons platform.
-The current firmware combines GPS positioning, CAN telemetry from the FT550 ECU, and LoRa broadcast on the LR1121 radio.
+FS27-DAQ is a dual-core telemetry data-acquisition system for the FS27 Leeds Gryphons car, forked from Louis Bishop's FS26-DAQ.
+The firmware combines GPS positioning, CAN telemetry from the FuelTech FT550 Lite ECU, and LoRa broadcast on the LR1121 radio.
+For the receiver that picks up the radio packets, see the [FS26-RCV wiki](https://github.com/LouWasHere/FS26-RCV/wiki).
 
 ## Wiki Map
 
@@ -12,14 +13,18 @@ The current firmware combines GPS positioning, CAN telemetry from the FT550 ECU,
 
 ## What the firmware does
 
-- Core 0 handles GPS UART processing and CAN reception.
+- Core 0 handles GPS UART processing, CAN reception and the screen frames.
 - Core 1 handles LoRa transmission.
 - GPS data is parsed from NMEA sentences, filtered, and shared safely across cores.
-- CAN data is collected from the FT550 stream and merged into the transmitted telemetry.
+- CAN data is decoded from the FT550 simplified broadcast and merged into the transmitted telemetry.
 
 ## Where to start in the code
 
-- [`FS26-DAQ.c`](../FS26-DAQ.c) contains the main dual-core control flow.
+- [`FS26-DAQ_fs27.c`](../FS26-DAQ_fs27.c) contains the main dual-core control flow.
+- [`can_handler_fs27.c`](../can_handler_fs27.c) handles MCP2515 reception and FT550 decoding.
+- [`ft550_decoder.c`](../ft550_decoder.c) maps each FT550 frame ID to sensor values.
 - [`gps.c`](../gps.c) implements GPS setup, parsing, and filtering.
-- [`can_handler.c`](../can_handler.c) handles MCP2515 reception and sensor extraction.
 - [`lr1121_tx.c`](../lr1121_tx.c) implements LR1121 TX-only operation.
+- [`FS26_Ryland`](../FS26_Ryland) contains the WinStar SmartDisplay builder project for the steering wheel screen.
+
+`FS26-DAQ.c` and `can_handler.c` are Louis's FS26 originals. They're kept for reference but aren't built.
