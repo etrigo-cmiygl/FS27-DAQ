@@ -53,11 +53,11 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(FS26-DAQ 
-    FS26-DAQ.c 
+    FS26-DAQ_fs27.c
     gps.c      # <--- Check if this is named gps.c in your folder!
     lr1121_config.c
     lr1121_tx.c
-    can_handler.c
+    can_handler_fs27.c
     ft550_decoder.c
 )
 
