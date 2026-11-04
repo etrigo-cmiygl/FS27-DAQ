@@ -21,6 +21,7 @@ Louis's original files are kept untouched for reference. Each changed file is a 
 | --- | --- | --- |
 | `can_handler_fs27.c` | `can_handler.c` | Uses the FT550 decoder (`ft550_decoder.c`) instead of the M84 burst decoder. Every frame read keeps the drain loop going, so frames from the PDM, lambda unit and screen don't stall it. |
 | `FS26-DAQ_fs27.c` | `FS26-DAQ.c` | Converts FT550 MAP (bar) to kPa for screen frame 0x600, to match `custom_packet.dbc`. |
+| `gps_fs27.c` | `gps.c` | Fixes the checksum on the GPS baud-rate command (`$PMTK251,57600*2C`, was `*00`), so the switch to 57600 baud and 5 Hz no longer fails. |
 | `tests/ft550_decoder_test_fs27.c` | n/a (new) | Desk test for the FT550 decoder. Runs on a laptop. |
 | `CMakeLists.txt` | n/a (edited in place, since CMake needs this exact name) | Builds the `_fs27` files. The target is renamed `FS27-DAQ`, so the output is `FS27-DAQ.uf2`. |
 

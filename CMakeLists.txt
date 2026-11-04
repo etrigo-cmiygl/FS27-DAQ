@@ -54,7 +54,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(FS27-DAQ
     FS26-DAQ_fs27.c
-    gps.c
+    gps_fs27.c
     lr1121_config.c
     lr1121_tx.c
     can_handler_fs27.c

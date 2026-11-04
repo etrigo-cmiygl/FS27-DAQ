@@ -10,7 +10,7 @@ This page describes the live telemetry path through the firmware.
 - 57600 baud for normal operation, falling back to 9600 if the switch fails
 - a 5 Hz update rate
 
-Known issue: the baud-switch command `$PMTK251,57600*00` has the wrong checksum (it should be `*2C`). The GPS ignores it, so the switch usually fails. The fallback path then also skips the 5 Hz setting.
+Fixed for FS27: the FS26 baud-switch command `$PMTK251,57600*00` had the wrong checksum, so the GPS ignored it and the firmware fell back to 9600 baud without setting 5 Hz. `gps_fs27.c` sends `$PMTK251,57600*2C`.
 
 `gps_process()` buffers incoming NMEA characters, verifies the checksum, and parses:
 
