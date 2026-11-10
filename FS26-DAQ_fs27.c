@@ -5,7 +5,7 @@
 #include "pico/mutex.h"
 #include "gps.h"
 #include "lr1121_tx.h"
-#include "can_handler.h"
+#include "can_handler_fs27.h"
 #include "ft550_decoder.h"
 #include "src/mcp2515/MCP2515/MCP2515.h"
 
@@ -157,6 +157,7 @@ int main() {
     safe_printf("Core 0: Both cores running. Starting GPS processing...\n");
     
     uint32_t last_dash_tx = 0; // Track when we last updated the screen
+    uint32_t last_can_status = 0;
 
     // Core 0 main loop - dedicated GPS & CAN processing
     while (true) {
@@ -224,6 +225,11 @@ int main() {
             MCP2515_Send(0x603, meta_tx_buf, 8);
 
             last_dash_tx = current_time;
+        }
+
+        if (current_time - last_can_status >= 1000) {
+            can_print_status();
+            last_can_status = current_time;
         }
         
         // Small delay to prevent locking the bus completely
