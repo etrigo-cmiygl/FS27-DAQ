@@ -120,6 +120,11 @@ void core1_main() {
             safe_printf("[TX] RPM:%u | Batt:%.2f | TPS:%.3f | EngineTemp:%.1f | TX#%u CAN#%u\n",
                    packet.rpm, packet.battery_voltage, packet.tps, packet.engine_temp,
                    packet.tx_count, packet.can_frame_count);
+            safe_printf("[ECU] MAP:%.3f bar | AirTemp:%.1f | Oil:%.2f bar | Fuel:%.2f bar | Water:%.2f bar | Lambda:%.3f\n",
+                   can_data.map, can_data.air_temp, can_data.oil_pressure, can_data.fuel_pressure,
+                   can_data.water_pressure, can_data.exhaust_o2);
+            safe_printf("[GPS] Sats:%d | Fix:%d | Speed:%.1f kph\n",
+                   gps.satellites, gps.fix_valid ? 1 : 0, gps.speed_kph);
         } else {
             safe_printf("[TX] FAILED #%lu\n", lora_get_tx_count());
         }
