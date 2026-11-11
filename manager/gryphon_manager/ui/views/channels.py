@@ -201,6 +201,139 @@ class ChannelDialog(QDialog):
         self.accept()
 
 
+def _safe_int(value):
+    try:
+        return parse_int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _channel_combo(cfg, current: str) -> QComboBox:
+    c = QComboBox()
+    for ch in cfg.channels:
+        c.addItem(f"{ch.get('name', ch.get('key'))}  ({ch.get('key')})", ch.get("key"))
+    i = c.findData(current)
+    if i >= 0:
+        c.setCurrentIndex(i)
+    return c
+
+
+class ScreenSignalDialog(QDialog):
+    def __init__(self, parent, cfg, frame: dict | None, sg: dict | None):
+        super().__init__(parent)
+        self.setWindowTitle("Screen frame signal")
+        self.setMinimumWidth(480)
+        self.orig = dict(sg or {})
+        s = self.orig
+        frames = cfg.data.get("screen_frames", []) or []
+        self.names = {str(f.get("id")): f.get("name", "") for f in frames}
+        self.frame = QComboBox()
+        self.frame.setEditable(True)
+        self.frame.addItems(list(self.names))
+        self.frame.setToolTip("Pick a frame, or type a new ID (e.g. 0x604) to start a new one. "
+                              "Check new IDs don't clash with the PDM.")
+        if frame:
+            self.frame.setCurrentText(str(frame.get("id")))
+        self.frame_name = QLineEdit(frame.get("name", "") if frame else self.names.get(self.frame.currentText(), ""))
+        self.frame.currentTextChanged.connect(lambda t: self.frame_name.setText(self.names.get(t, self.frame_name.text())))
+        self.channel = _channel_combo(cfg, s.get("channel", ""))
+        self.name = QLineEdit(s.get("name", ""))
+        self.name.setPlaceholderText("Name in the screen project, e.g. Oil_Pressure")
+        self.byte = QSpinBox()
+        self.byte.setRange(0, 7)
+        self.byte.setValue(int(s.get("byte", 0)))
+        self.bits = QComboBox()
+        for b in (8, 16, 32):
+            self.bits.addItem(f"{b} bits", b)
+        self.bits.setCurrentIndex(max(0, self.bits.findData(int(s.get("bits", 16)))))
+        self.signed = QCheckBox("Can be negative (signed)")
+        self.signed.setChecked(bool(s.get("signed", False)))
+        self.scale = QLineEdit(str(s.get("scale", 0.1)))
+        self.scale.setToolTip("The screen shows raw x scale. 0.1 means the DAQ sends the value x10.")
+        self.units = QLineEdit(s.get("units", "") or "")
+        self.vmin = QLineEdit("" if s.get("min") is None else str(s.get("min")))
+        self.vmax = QLineEdit("" if s.get("max") is None else str(s.get("max")))
+        f = QFormLayout()
+        f.addRow("Frame ID", self.frame)
+        f.addRow("Frame name", self.frame_name)
+        f.addRow("Channel", self.channel)
+        f.addRow("Signal name", self.name)
+        f.addRow("Start byte", self.byte)
+        f.addRow("Size", self.bits)
+        f.addRow("", self.signed)
+        f.addRow("Scale", self.scale)
+        f.addRow("Units", self.units)
+        f.addRow("Range", hbox(self.vmin, label("to"), self.vmax))
+        box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        box.accepted.connect(self._ok)
+        box.rejected.connect(self.reject)
+        self.setLayout(vbox(f, box, margins=(18, 18, 18, 18)))
+
+    def _ok(self):
+        fid = self.frame.currentText().strip()
+        cid = _safe_int(fid)
+        try:
+            scale = float(self.scale.text())
+            vmin = float(self.vmin.text()) if self.vmin.text().strip() else None
+            vmax = float(self.vmax.text()) if self.vmax.text().strip() else None
+        except ValueError:
+            QMessageBox.information(self, "Screen signal", "Scale and range must be numbers.")
+            return
+        if cid is None or not 0 <= cid <= 0x7FF or scale == 0 or not self.name.text().strip():
+            QMessageBox.information(self, "Screen signal", "It needs a frame ID from 0x000 to 0x7FF, a signal "
+                                                           "name, and a scale that isn't 0.")
+            return
+        sg = dict(self.orig)
+        sg.update({"channel": self.channel.currentData(), "name": self.name.text().strip().replace(" ", "_"),
+                   "byte": self.byte.value(), "bits": self.bits.currentData(), "signed": self.signed.isChecked(),
+                   "scale": int(scale) if scale == int(scale) else scale, "units": self.units.text().strip()})
+        for k, v in (("min", vmin), ("max", vmax)):
+            if v is None:
+                sg.pop(k, None)
+            else:
+                sg[k] = int(v) if v == int(v) else v
+        self.fid = fid if fid.lower().startswith("0x") else f"0x{cid:03X}"
+        self.fname = self.frame_name.text().strip().replace(" ", "_")
+        self.sg = sg
+        self.accept()
+
+
+class PacketFieldDialog(QDialog):
+    def __init__(self, parent, cfg, field: dict | None):
+        super().__init__(parent)
+        self.setWindowTitle("Radio packet field")
+        self.setMinimumWidth(440)
+        fld = field or {}
+        self.channel = _channel_combo(cfg, fld.get("channel", ""))
+        self.name = QLineEdit(fld.get("name", ""))
+        self.name.setPlaceholderText("Name in the firmware struct (blank = the channel key)")
+        self.ftype = QComboBox()
+        for t, text in (("f32", "f32: decimal number, 4 bytes"), ("u16", "u16: 0 to 65535, 2 bytes"),
+                        ("i16", "i16: -32768 to 32767, 2 bytes"), ("u8", "u8: 0 to 255, 1 byte"),
+                        ("i8", "i8: -128 to 127, 1 byte"), ("u32", "u32: big whole number, 4 bytes"),
+                        ("i32", "i32: big signed number, 4 bytes")):
+            self.ftype.addItem(text, t)
+        self.ftype.setCurrentIndex(max(0, self.ftype.findData(fld.get("type", "f32"))))
+        f = QFormLayout()
+        f.addRow("Channel", self.channel)
+        f.addRow("Field name", self.name)
+        f.addRow("Type", self.ftype)
+        box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        box.accepted.connect(self._ok)
+        box.rejected.connect(self.reject)
+        self.setLayout(vbox(f, box, margins=(18, 18, 18, 18)))
+
+    def _ok(self):
+        key = self.channel.currentData()
+        name = self.name.text().strip().replace(" ", "_") or key
+        if not name.replace("_", "").isalnum() or name[0].isdigit():
+            QMessageBox.information(self, "Radio packet field", "The field name can only use letters, numbers "
+                                                                "and underscores, and can't start with a number.")
+            return
+        self.field = {"name": name, "channel": key, "type": self.ftype.currentData()}
+        self.accept()
+
+
 class DiffDialog(QDialog):
     def __init__(self, parent, changes: list[tuple[str, str, str]], out_dir: Path):
         super().__init__(parent)
@@ -274,10 +407,54 @@ class ChannelsView(View):
         self.btn_save = button("Save", self._save, tip="Save the master config file")
         self.btn_gen = button("Generate files...", self._generate, "primary",
                               "Write the team DBC, screen DBC, firmware header and signal list. Shows a diff first.")
-        self.root.addLayout(hbox(button("Add a channel", self._add, "primary"), button("Edit", self._edit),
-                                 button("Delete", self._delete), None, self.status, self.btn_save,
+        self.root.addLayout(hbox(self.status, None, self.btn_save,
                                  button("Undo all changes", self._revert), self.btn_gen))
-        self.root.addWidget(self.table, 1)
+        from PySide6.QtWidgets import QWidget
+        self.tabs = QTabWidget()
+        t1 = QWidget()
+        t1.setLayout(vbox(hbox(button("Add a channel", self._add, "primary"), button("Edit", self._edit),
+                               button("Delete", self._delete), None), (self.table, 1), margins=(10, 10, 10, 10)))
+        self.tabs.addTab(t1, "Channels")
+
+        self.sf_model = SimpleTableModel(
+            ["Frame", "Frame name", "Signal", "Channel", "Start byte", "Size", "Signed", "Scale", "Units"],
+            ["CAN ID the DAQ sends", "", "Name the screen project uses", "Which channel's value goes here",
+             "First data byte (0-7)", "", "", "Screen value = raw x scale", ""])
+        self.sf_model.cell = self._sf_cell
+        self.sf_table = QTableView()
+        self.sf_table.setModel(self.sf_model)
+        setup_table(self.sf_table, 3, {0: 80, 1: 170, 2: 170, 4: 90, 5: 80, 6: 70, 7: 90, 8: 80})
+        self.sf_table.doubleClicked.connect(lambda *_: self._sf_edit())
+        t2 = QWidget()
+        t2.setLayout(vbox(
+            label("What the DAQ sends to the steering wheel screen. Little-endian, up to 8 bytes a frame. "
+                  "The screen project must be loaded with the generated gryphon_screen.dbc after any change here.",
+                  "dim", wrap=True),
+            hbox(button("Add a signal", self._sf_add, "primary"), button("Edit", self._sf_edit),
+                 button("Delete", self._sf_delete), None,
+                 label("To start a new frame, add a signal and type a new frame ID.", "dim")),
+            (self.sf_table, 1), margins=(10, 10, 10, 10)))
+        self.tabs.addTab(t2, "Screen frames")
+
+        self.rp_model = SimpleTableModel(["#", "Offset", "Field", "Channel", "Type", "Bytes"],
+                                         ["Order in the packet", "Byte position in the packet",
+                                          "Name in the firmware struct", "Which channel's value goes here",
+                                          "u8/u16/u32 whole numbers, i = signed, f32 = decimal", ""])
+        self.rp_model.cell = lambda r, c: r[c]
+        self.rp_table = QTableView()
+        self.rp_table.setModel(self.rp_model)
+        setup_table(self.rp_table, 3, {0: 50, 1: 70, 2: 200, 4: 80, 5: 70})
+        self.rp_table.doubleClicked.connect(lambda *_: self._rp_edit())
+        self.rp_info = label("", "dim", wrap=True)
+        t3 = QWidget()
+        t3.setLayout(vbox(
+            self.rp_info,
+            hbox(button("Add a field", self._rp_add, "primary"), button("Edit", self._rp_edit),
+                 button("Remove", self._rp_delete), button("Move up", lambda: self._rp_move(-1)),
+                 button("Move down", lambda: self._rp_move(1)), None),
+            (self.rp_table, 1), margins=(10, 10, 10, 10)))
+        self.tabs.addTab(t3, "Radio packet")
+        self.root.addWidget(self.tabs, 1)
         pc = Card("Checks", "Problems that would break the generated files")
         pc.add(self.problems)
         self.root.addWidget(pc)
@@ -311,6 +488,25 @@ class ChannelsView(View):
         self.model.beginResetModel()
         self.model.rows = self.cfg.channels
         self.model.endResetModel()
+        self.sf_rows = [(fr, sg) for fr in self.cfg.data.get("screen_frames", []) or []
+                        for sg in fr.get("signals", []) or []]
+        self.sf_model.beginResetModel()
+        self.sf_model.rows = self.sf_rows
+        self.sf_model.endResetModel()
+        from ...core.config import FIELD_TYPES
+        import struct as _struct
+        rows, off = [("", 0, "magic", "(fixed marker)", "u32", 4)], 4
+        for i, f in enumerate(self._rp_fields()):
+            size = _struct.calcsize("<" + FIELD_TYPES.get(f.get("type"), "B"))
+            rows.append((i + 1, off, f.get("name", ""), self._ch_name(f.get("channel", "")), f.get("type", ""), size))
+            off += size
+        self.rp_model.beginResetModel()
+        self.rp_model.rows = rows
+        self.rp_model.endResetModel()
+        self.rp_info.setText(
+            f"The LoRa packet, in order: {off} bytes now (the firmware and receiver today expect 68). Changing "
+            "this changes the generated struct, so the DAQ and receiver firmware must be rebuilt to match, "
+            "and layout_version should go up.")
         probs = self.cfg.validate()
         self.problems.clear()
         if probs:
@@ -326,6 +522,134 @@ class ChannelsView(View):
                             f"{self.cfg.radio_size} bytes" + ("   (unsaved changes)" if self.dirty else ""))
         self.btn_save.setEnabled(self.dirty)
         self.path_label.setText(f"Master config: {self.hub.config_path}")
+
+    # ---- screen frames and radio packet ----------------------------------------
+
+    def _ch_name(self, key: str) -> str:
+        ch = self.cfg.channel(key)
+        return f"{ch.get('name', key)}  ({key})" if ch else f"{key}  (missing!)"
+
+    def _rp_fields(self) -> list:
+        return self.cfg.data.setdefault("radio_packet", {}).setdefault("fields", [])
+
+    def _sf_cell(self, row, col):
+        fr, sg = row
+        if col == 0:
+            return str(fr.get("id", ""))
+        if col == 1:
+            return fr.get("name", "")
+        if col == 2:
+            return sg.get("name", "")
+        if col == 3:
+            return self._ch_name(sg.get("channel", ""))
+        if col == 4:
+            return str(sg.get("byte", ""))
+        if col == 5:
+            return f"{sg.get('bits', '')} bits"
+        if col == 6:
+            return "yes" if sg.get("signed") else ""
+        if col == 7:
+            return f"{sg.get('scale', 1):g}"
+        return sg.get("units", "")
+
+    def _sel(self, table) -> int:
+        idx = table.selectionModel().selectedRows()
+        return idx[0].row() if idx else -1
+
+    def _changed(self):
+        self.dirty = True
+        self._fill()
+
+    def _sf_place(self, fid: str, fname: str, sg: dict) -> None:
+        frames = self.cfg.data.setdefault("screen_frames", [])
+        try:
+            want = parse_int(fid)
+        except ValueError:
+            want = None
+        fr = next((f for f in frames if want is not None and _safe_int(f.get("id")) == want), None)
+        if fr is None:
+            fr = {"id": fid, "name": fname or "GRYPHON_NEW", "signals": []}
+            frames.append(fr)
+        elif fname:
+            fr["name"] = fname
+        fr.setdefault("signals", []).append(sg)
+        fr["signals"].sort(key=lambda x: x.get("byte", 0))
+
+    def _sf_add(self):
+        dlg = ScreenSignalDialog(self, self.cfg, None, None)
+        if dlg.exec() == QDialog.Accepted:
+            self._sf_place(dlg.fid, dlg.fname, dlg.sg)
+            self._changed()
+
+    def _sf_edit(self):
+        row = self._sel(self.sf_table)
+        if row < 0:
+            self.hub.notice.emit("info", "Click a signal first, then Edit.")
+            return
+        fr, sg = self.sf_rows[row]
+        dlg = ScreenSignalDialog(self, self.cfg, fr, sg)
+        if dlg.exec() == QDialog.Accepted:
+            fr["signals"].remove(sg)
+            if not fr["signals"]:
+                self.cfg.data["screen_frames"].remove(fr)
+            self._sf_place(dlg.fid, dlg.fname, dlg.sg)
+            self._changed()
+
+    def _sf_delete(self):
+        row = self._sel(self.sf_table)
+        if row < 0:
+            self.hub.notice.emit("info", "Click a signal first, then Delete.")
+            return
+        fr, sg = self.sf_rows[row]
+        if QMessageBox.question(self, "Delete signal", f"Take '{sg.get('name')}' out of frame {fr.get('id')}?") \
+                == QMessageBox.Yes:
+            fr["signals"].remove(sg)
+            if not fr["signals"]:
+                self.cfg.data["screen_frames"].remove(fr)
+            self._changed()
+
+    def _rp_add(self):
+        dlg = PacketFieldDialog(self, self.cfg, None)
+        if dlg.exec() == QDialog.Accepted:
+            self._rp_fields().append(dlg.field)
+            self._changed()
+            self.rp_table.selectRow(len(self._rp_fields()))
+
+    def _rp_index(self) -> int:
+        row = self._sel(self.rp_table)
+        if row < 1:
+            self.hub.notice.emit("info", "Click a field first (the magic marker at the top can't be changed).")
+            return -1
+        return row - 1
+
+    def _rp_edit(self):
+        i = self._rp_index()
+        if i < 0:
+            return
+        dlg = PacketFieldDialog(self, self.cfg, self._rp_fields()[i])
+        if dlg.exec() == QDialog.Accepted:
+            self._rp_fields()[i] = dlg.field
+            self._changed()
+            self.rp_table.selectRow(i + 1)
+
+    def _rp_delete(self):
+        i = self._rp_index()
+        if i < 0:
+            return
+        name = self._rp_fields()[i].get("name", "")
+        if QMessageBox.question(self, "Remove field", f"Take '{name}' out of the radio packet?") == QMessageBox.Yes:
+            del self._rp_fields()[i]
+            self._changed()
+
+    def _rp_move(self, step: int):
+        i = self._rp_index()
+        fields = self._rp_fields()
+        j = i + step
+        if i < 0 or not 0 <= j < len(fields):
+            return
+        fields[i], fields[j] = fields[j], fields[i]
+        self._changed()
+        self.rp_table.selectRow(j + 1)
 
     def _row(self) -> int:
         idx = self.table.selectionModel().selectedRows()

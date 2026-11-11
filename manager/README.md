@@ -38,7 +38,7 @@ Recordings, reports and settings live in `Documents\Gryphon Manager`.
 | Car test | Seven guided steps, saves an HTML + PDF pass/fail report with the raw log |
 | Alarms | Rules such as "oil pressure below 1 bar while RPM is above 2000", red banner, optional sound |
 | Sessions | Recordings: replay at 0.5-8x, jump to alarm, min/max/avg, overlay two sessions or laps, CSV export |
-| Channels | Editor for `config/channels.yaml`. Generate writes the DBCs and the firmware header, with a diff first |
+| Channels | Editor for `config/channels.yaml`: channels, the screen frame layout and the radio packet fields. Generate writes the DBCs and the firmware header, with a diff first |
 | DAQ settings | Built and disabled until the DAQ firmware supports the settings protocol |
 | Firmware | Finds the RP2350 drive, copies the `.uf2`, confirms the DAQ boots |
 | Help | The built-in "start here" guide |

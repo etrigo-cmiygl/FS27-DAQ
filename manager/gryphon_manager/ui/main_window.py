@@ -113,7 +113,16 @@ class MainWindow(QMainWindow):
         lay = QVBoxLayout(side)
         lay.setContentsMargins(12, 16, 12, 12)
         lay.setSpacing(2)
-        lay.addWidget(label("GRYPHON", "brand"))
+        from PySide6.QtGui import QPixmap
+        from ..core.paths import asset_path
+        logo = asset_path("logo_dark.png")
+        if logo.exists():
+            pic = QLabel()
+            pic.setPixmap(QPixmap(str(logo)).scaledToWidth(162, Qt.SmoothTransformation))
+            lay.addWidget(pic)
+            lay.addSpacing(4)
+        else:
+            lay.addWidget(label("GRYPHON", "brand"))
         lay.addWidget(label("MANAGER", "brandsub"))
         lay.addSpacing(16)
         self.nav_group = QButtonGroup(self)

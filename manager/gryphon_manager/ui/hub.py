@@ -129,6 +129,7 @@ class Hub(QObject):
         if src is not None:
             src.stop()
             src.join(1.5)
+        self.engine.alarms.active.clear()
         if self.state != "disconnected":
             self.state = "disconnected"
             self.engine.can_expected = False

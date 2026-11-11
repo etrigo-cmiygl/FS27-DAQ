@@ -295,7 +295,11 @@ class MasterConfig:
             for (s1, l1, n1), (s2, l2, n2) in zip(spans, spans[1:]):
                 if s2 < s1 + l1:
                     problems.append(f"{n1} and {n2} overlap in screen frame {fmt_id(fid, False)}.")
+        names: set[str] = {"magic"}
         for f in (self.data.get("radio_packet") or {}).get("fields", []) or []:
+            if f.get("name") in names:
+                problems.append(f"Radio packet: field name '{f.get('name')}' is used twice.")
+            names.add(f.get("name"))
             if f.get("channel") not in seen:
                 problems.append(f"Radio packet: unknown channel '{f.get('channel')}'.")
             if f.get("type") not in FIELD_TYPES:

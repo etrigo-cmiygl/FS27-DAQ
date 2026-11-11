@@ -160,3 +160,61 @@ def test_text_size_setting(win):
     apply_text_size(win.app, 17)
     assert "font-size: 17px" in win.app.styleSheet()
     apply_text_size(win.app, 13)
+
+
+def test_screen_frames_and_radio_packet_are_editable(win):
+    from gryphon_manager.core.config import MasterConfig
+    from gryphon_manager.ui.views.channels import PacketFieldDialog, ScreenSignalDialog
+    ch = win.views["channels"]
+    win.show_view("channels")
+    assert ch.tabs.count() == 3 and len(ch.sf_rows) == 13 and ch.rp_model.rowCount() == 22
+    assert "68 bytes" in ch.rp_info.text()
+
+    dlg = ScreenSignalDialog(ch, ch.cfg, None, None)
+    dlg.frame.setCurrentText("0x604")
+    dlg.frame_name.setText("GRYPHON PRESS")
+    dlg.channel.setCurrentIndex(dlg.channel.findData("oil_pressure"))
+    dlg.name.setText("Oil Pressure")
+    dlg.scale.setText("0.01")
+    dlg.units.setText("bar")
+    dlg._ok()
+    ch._sf_place(dlg.fid, dlg.fname, dlg.sg)
+    ch._changed()
+    assert ch.valid and len(ch.sf_rows) == 14 and ch.cfg.screen_ids[-1] == 0x604
+
+    fr, sg = next(r for r in ch.sf_rows if r[1]["name"] == "Throttle_Pos")
+    edit = ScreenSignalDialog(ch, ch.cfg, fr, sg)
+    edit.byte.setValue(4)
+    edit._ok()
+    fr["signals"].remove(sg)
+    ch._sf_place(edit.fid, edit.fname, edit.sg)
+    ch._changed()
+    assert not ch.valid and any("overlap" in ch.problems.item(i).text() for i in range(ch.problems.count()))
+    edit.sg["byte"] = 6
+    ch._changed()
+    assert ch.valid
+    assert next(s for f, s in ch.sf_rows if s["name"] == "Manifold_Pres").get("convert") == 100
+
+    pf = PacketFieldDialog(ch, ch.cfg, None)
+    pf.channel.setCurrentIndex(pf.channel.findData("water_pressure"))
+    pf.ftype.setCurrentIndex(pf.ftype.findData("u16"))
+    pf._ok()
+    ch._rp_fields().append(pf.field)
+    ch._changed()
+    assert ch.cfg.radio_size == 70 and "70 bytes" in ch.rp_info.text()
+    ch.rp_table.selectRow(22)
+    ch._rp_move(-1)
+    assert ch._rp_fields()[-2]["name"] == "water_pressure" and ch.valid
+    ch._rp_fields().append(dict(pf.field))
+    ch._changed()
+    assert not ch.valid
+    del ch._rp_fields()[-1]
+    ch._changed()
+
+    ch.cfg.save(win.hub.config_path)
+    again = MasterConfig.load(win.hub.config_path)
+    assert again.validate() == [] and again.radio_size == 70
+    files = again.generate()
+    assert "GRYPHON_PRESS" in files["gryphon_screen.dbc"] and "Oil_Pressure" in files["gryphon_screen.dbc"]
+    assert "uint16_t water_pressure;" in files["gryphon_channels.h"]
+    assert "GRYPHON_PACKET_SIZE 70" in files["gryphon_channels.h"]

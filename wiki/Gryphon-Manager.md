@@ -88,8 +88,6 @@ Left for later:
 
 - DAQ settings needs firmware support. The page and the [protocol](DAQ-Settings-Protocol.md) are ready.
 - Rocky still prints the text box. The app reads it, and reads the [PKT format](Receiver-PKT-Format.md) as soon as Rocky sends it.
-- The Channels view edits channels. The screen frame layout and the radio packet field list are still edited by hand in the YAML.
 - PDM and lambda decoding needs their IDs and layouts.
 - Mac build, and PCAN on a Mac.
-- The real Gryphon logo and exact colours. The icon is a placeholder.
 - Nothing has been tried on the real car or with a real PCAN-USB yet.
