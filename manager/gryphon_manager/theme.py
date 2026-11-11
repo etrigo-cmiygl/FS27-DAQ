@@ -74,6 +74,8 @@ QCheckBox, QRadioButton {{ spacing: 8px; }}
 QCheckBox:disabled, QRadioButton:disabled, QLabel:disabled {{ color: {GREY}; }}
 QCheckBox::indicator {{ width: 16px; height: 16px; border: 1px solid {GREY}; border-radius: 4px; background: {BG}; }}
 QCheckBox::indicator:checked {{ background: {GREEN_BRIGHT}; border-color: {GREEN_BRIGHT}; }}
+QRadioButton::indicator {{ width: 14px; height: 14px; border: 2px solid {GREY}; border-radius: 9px; background: {BG}; }}
+QRadioButton::indicator:checked {{ background: {GREEN_BRIGHT}; border-color: {TEXT}; }}
 QTableView, QTreeView, QListWidget, QTextBrowser {{
     background: {PANEL}; alternate-background-color: #161D1A; border: 1px solid {BORDER}; border-radius: 8px;
     gridline-color: {BORDER}; selection-background-color: {GREEN}; selection-color: {TEXT}; outline: none; }}

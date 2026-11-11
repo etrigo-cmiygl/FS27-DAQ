@@ -140,7 +140,8 @@ class GarageView(View):
         self.trend.add(self.trend_plot, 1)
         side = vbox(self.bus, self.ecu, self.daq, None, spacing=10)
         left = vbox(grid, (self.trend, 1), spacing=10)
-        body = hbox((self._w(left), 3), (self._w(side), 2), spacing=12)
+        self.side_widget = self._w(side)
+        body = hbox((self._w(left), 3), (self.side_widget, 2), spacing=12)
         w.setLayout(vbox(chips, (self._w(body), 1), spacing=12))
         return w
 
@@ -152,8 +153,9 @@ class GarageView(View):
         return w
 
     def set_pit_wall(self, on: bool) -> None:
+        self.side_widget.setVisible(not on)
         for t in self.tiles.values():
-            t.set_scale(1.5 if on else 1.0)
+            t.set_scale(1.7 if on else 1.0)
 
     def refresh(self) -> None:
         hub, e = self.hub, self.hub.engine

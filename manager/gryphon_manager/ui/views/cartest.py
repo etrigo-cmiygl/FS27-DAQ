@@ -157,15 +157,18 @@ class CarTestView(View):
         step = STEPS[row]
         self.step_title.setText(f"Step {row + 1} of {len(STEPS)}: {step.title}")
         self.step_intro.setText(step.intro)
-        while self.inputs_lay.count():
-            item = self.inputs_lay.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-            elif item.layout():
-                while item.layout().count():
-                    sub = item.layout().takeAt(0)
-                    if sub.widget():
-                        sub.widget().deleteLater()
+        def drop(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                w = item.widget()
+                if w is not None:
+                    w.hide()
+                    w.setParent(None)
+                    w.deleteLater()
+                elif item.layout() is not None:
+                    drop(item.layout())
+
+        drop(self.inputs_lay)
         self.widgets = {}
         for key, text, kind in step.inputs:
             if kind == "tick":
