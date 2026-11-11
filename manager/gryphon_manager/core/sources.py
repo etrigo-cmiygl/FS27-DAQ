@@ -86,9 +86,9 @@ class CanSource(Source):
                 code = int(bus.status())
                 if code & 0x10:
                     st.state = "Bus off"
-                elif code & 0x40008:
+                elif code & 0x40000:
                     st.state = "Error passive"
-                elif code & 0x04:
+                elif code & 0x0C:
                     st.state = "Error warning"
                 else:
                     st.state = "OK (listen-only)" if self.listen_only else "OK"
@@ -118,13 +118,28 @@ class CanSource(Source):
         self.emit("opened", self.label + (" (listen-only)" if self.listen_only else " (transmit allowed)"))
         offset = None
         last_status = 0.0
+        bad = 0
         try:
             while not self._stop_evt.is_set():
                 try:
                     msg = self.bus.recv(0.1)
+                    bad = 0
                 except can.CanError as exc:
-                    self.emit("error", f"The CAN adapter stopped responding. Was it unplugged?\n(Details: {exc})")
-                    break
+                    # Bus-off and error-passive surface here on PCAN. They're about the bus, not the adapter,
+                    # so report them and keep listening. Only give up if the adapter itself has gone.
+                    bad += 1
+                    gone = False
+                    try:
+                        code = int(self.bus.status()) if self.interface == "pcan" else 0
+                        gone = bool(code & 0x1400)
+                    except Exception:
+                        gone = True
+                    if gone or bad > 100:
+                        self.emit("error", "The CAN adapter stopped responding. Was it unplugged?\n"
+                                           f"(Details: {exc})")
+                        break
+                    msg = None
+                    self._stop_evt.wait(0.1)
                 now = time.time()
                 if msg is not None:
                     if offset is None or abs(msg.timestamp + offset - now) > 2.0:

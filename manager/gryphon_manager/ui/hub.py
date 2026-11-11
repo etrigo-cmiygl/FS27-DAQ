@@ -171,7 +171,7 @@ class Hub(QObject):
         if self.recorder.active:
             path = self.stop_recording()
             if path:
-                self.notice.emit("info", f"Recording saved: {path.name}")
+                self.notice.emit("info", f"Recording saved: {path.name}. Name it and add notes in Sessions.")
         elif self.connected and self.kind != "replay":
             self.start_recording()
         else:

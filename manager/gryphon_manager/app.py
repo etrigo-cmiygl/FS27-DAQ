@@ -74,7 +74,30 @@ def selftest(png: str | None) -> int:
                 states = {k: d.status for k, d in e.devices.items()}
                 log.append(f"version {__version__}")
                 log.append(f"frames {e.total_frames}, radio packets {e.radio.received}, devices {states}")
-                ok = e.total_frames > 300 and e.radio.received > 2 and all(v == "green" for v in states.values())
+                import importlib
+                missing = []
+                for mod in ("can.interfaces.pcan", "can.interfaces.pcan.basic", "can.interfaces.slcan",
+                            "can.interfaces.virtual", "can.io.blf", "can.io.asc", "serial.tools.list_ports",
+                            "cantools", "yaml"):
+                    try:
+                        importlib.import_module(mod)
+                    except ModuleNotFoundError as exc:
+                        missing.append(f"{mod}: {exc}")
+                    except Exception as exc:
+                        log.append(f"note: importing {mod} raised {type(exc).__name__}: {exc}")
+                log.append(f"bundled modules missing: {missing or 'none'}")
+                import queue as _q
+                from .core.sources import CanSource
+                probe_q = _q.Queue()
+                probe = CanSource(probe_q, "pcan", "PCAN_USBBUS1")
+                probe.start()
+                probe.join(5)
+                while not probe_q.empty():
+                    kind, payload = probe_q.get()
+                    if kind in ("error", "opened"):
+                        log.append(f"PCAN probe ({kind}): " + str(payload).replace(chr(10), " | "))
+                ok = (e.total_frames > 300 and e.radio.received > 2 and not missing
+                      and all(v == "green" for v in states.values()))
                 log.append("SELFTEST PASS" if ok else "SELFTEST FAIL")
                 if png:
                     win.grab().save(png)

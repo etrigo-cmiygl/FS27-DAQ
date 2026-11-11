@@ -146,3 +146,37 @@ def test_missing_pcan_driver_gets_a_friendly_message():
     assert errors and "peak-system.com" in errors[0] and "Traceback" not in errors[0]
     assert items[-1][0] == "ended"
     assert "COM port" in friendly_can_error("slcan", RuntimeError("x"))
+
+
+def test_bus_off_is_reported_not_treated_as_unplugged(monkeypatch):
+    import can
+
+    class FakePcan:
+        def __init__(self):
+            self.code = 0x10
+            self.calls = 0
+
+        def recv(self, timeout):
+            self.calls += 1
+            if self.calls > 12:
+                self.code = 0x1400
+            raise can.CanOperationError("bus off")
+
+        def status(self):
+            return self.code
+
+        def shutdown(self):
+            pass
+
+    fake = FakePcan()
+    q = queue.Queue()
+    src = CanSource(q, "pcan", "PCAN_USBBUS1")
+    monkeypatch.setattr(src, "_open", lambda: fake)
+    src.start()
+    src.join(6)
+    items = drain(q, 0.2)
+    states = [p.state for k, p in items if k == "status"]
+    assert "Bus off" in states
+    errors = [p for k, p in items if k == "error"]
+    assert len(errors) == 1 and "unplugged" in errors[0]
+    assert fake.calls > 12 and items[-1][0] == "ended"
