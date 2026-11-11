@@ -70,6 +70,9 @@ class LapTimer:
         if math.hypot(x1 - x0, y1 - y0) < 0.5:
             return False
         self.set_gate(pts[best_i][1], pts[best_i][2], x1 - x0, y1 - y0)
+        self._last = None
+        for ts, la, lo, *_ in pts:
+            self.add_point(ts, la, lo)
         return True
 
     def gate_line(self) -> tuple[tuple[float, float], tuple[float, float]] | None:

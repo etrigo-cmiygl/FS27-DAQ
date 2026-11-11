@@ -1,0 +1,3 @@
+version 1.0.0
+frames 1056, radio packets 10, devices {'ecu': 'green', 'daq': 'green', 'pdm': 'green', 'lambda': 'green', 'screen': 'green'}
+SELFTEST PASS

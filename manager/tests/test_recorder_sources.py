@@ -49,7 +49,7 @@ def test_analyse_and_csv_export(cfg, tmp_path):
         table = list(csv.reader(fh))
     assert rows == len(table) - 1 and rows >= 195
     head = table[0]
-    assert head[0] == "time_s" and "rpm [rpm]" in head and "engine_temp [C]" in head
+    assert head[0] == "time_s" and "rpm [rpm]" in head and "engine_temp [°C]" in head
     assert float(table[-1][head.index("rpm [rpm]")]) > 3000
 
 

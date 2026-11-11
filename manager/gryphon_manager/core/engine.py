@@ -16,11 +16,14 @@ SOURCE_LABEL = {"": "ECU", "daq.": "DAQ frame", "usb.": "DAQ USB", "radio.": "ra
 
 COMPARE = (
     ("RPM", "rpm", 1.0, 150.0, "rpm"),
-    ("Engine temp", "engine_temp", 1.0, 1.0, "C"),
+    ("Engine temp", "engine_temp", 1.0, 1.0, "°C"),
     ("Throttle", "tps", 1.0, 2.0, "%"),
     ("MAP", "map", 100.0, 3.0, "kPa"),
-    ("Air temp", "air_temp", 1.0, 1.0, "C"),
+    ("Air temp", "air_temp", 1.0, 1.0, "°C"),
 )
+
+
+PRETTY_UNITS = {"C": "°C", "lambda": "λ", "kph": "km/h", "bool": "", "count": ""}
 
 
 class Sig:
@@ -28,7 +31,7 @@ class Sig:
                  "source", "note", "lo", "hi", "_rts", "ht", "hv")
 
     def __init__(self, key, name, units="", group="", source="", note="", lo=None, hi=None, maxlen=HISTORY):
-        self.key, self.name, self.units, self.group = key, name, units, group
+        self.key, self.name, self.units, self.group = key, name, PRETTY_UNITS.get(units, units), group
         self.source, self.note, self.lo, self.hi = source, note, lo, hi
         self.value = None
         self.vmin = None
@@ -176,6 +179,7 @@ class Engine:
         self.track: deque = deque(maxlen=20000)
         self.daq_can: dict = {}
         self.daq_can_ts = 0.0
+        self.daq_rx_rate = 0.0
         self.daq_boot: list[str] = []
         self.daq_tx_fail = 0
         self.bus_state = ""
@@ -379,6 +383,9 @@ class Engine:
         if not self.first_ts:
             self.first_ts = d.ts
         if d.kind == "CAN":
+            prev, prev_ts = self.daq_can.get("rx"), self.daq_can_ts
+            if prev is not None and d.ts > prev_ts:
+                self.daq_rx_rate = max(0.0, (d.values["rx"] - prev) / (d.ts - prev_ts))
             self.daq_can = d.values
             self.daq_can_ts = d.ts
             for k, v in d.values.items():
@@ -473,7 +480,7 @@ class Engine:
                     daq = self.devices.get("daq")
                     if daq and daq.status in ("green", "amber"):
                         st.status = "green"
-                        st.text = "Being sent data. The screen only listens, so tick what it shows in Car test."
+                        st.text = "Being fed by the DAQ. It only listens, so check it by eye in Car test."
                     else:
                         st.status, st.text = "grey", "Listens only. Needs the DAQ's 0x600-0x603 frames."
                 else:

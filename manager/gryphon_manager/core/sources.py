@@ -206,8 +206,10 @@ class SimSource(Source):
     label = "Simulator"
 
     def __init__(self, out, cfg, parts: str = "all", mode: str = "drive", fault: str = "none",
-                 ecu_hz: float = 10.0, stress_fps: int = 0, receiver_format: str = "box"):
+                 ecu_hz: float = 10.0, stress_fps: int = 0, receiver_format: str = "box",
+                 warmup: float = 0.0):
         super().__init__(out)
+        self.warmup = warmup
         from .simulator import SimCar
         self.car = SimCar(cfg, mode=mode, fault=fault, ecu_hz=ecu_hz, stress_fps=stress_fps,
                           receiver_format=receiver_format)
@@ -227,10 +229,15 @@ class SimSource(Source):
         return {"frame": "can", "rxline": "radio", "daqline": "daq"}.get(kind) == p
 
     def run(self) -> None:
-        base = time.time()
+        base = time.time() - self.warmup
         self.emit("opened", self.label)
         t_prev = 0.0
         last_status = 0.0
+        if self.warmup > 0:
+            for kind, payload in self.car.step(0.0, self.warmup, base):
+                if self.wanted(kind):
+                    self.emit(kind, payload)
+            t_prev = self.warmup
         while not self._stop_evt.is_set():
             time.sleep(0.02)
             t = time.time() - base

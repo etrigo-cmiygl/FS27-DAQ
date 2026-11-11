@@ -56,9 +56,12 @@ class SimCar:
         self.can_count = 0
         self.rx_count = 0
         self.fuel_used = 0.0
+        self.laps_done = 0
         self._next = {"ecu": 0.0, "daq": 0.0, "pdm": 0.0, "lambda": 0.0, "radio": 0.0, "daqcan": 0.0,
                       "err": 0.0, "stress": 0.0}
         self.values: dict = {}
+        self._ecu_seen: dict = {}
+        self._ecu_keys = [sd.key for (cid, ext), defs in cfg.by_id.items() if ext for sd in defs]
         self.lat, self.lon = self._pos(0.0)
         self._update(0.0)
 
@@ -90,14 +93,21 @@ class SimCar:
             h1, h2 = math.atan2(y1 - y0, x1 - x0), math.atan2(y2 - y1, x2 - x1)
             dh = (h2 - h1 + math.pi) % (2 * math.pi) - math.pi
             curv = abs(dh) / max(math.hypot(x1 - x0, y1 - y0), 1e-6)
-            target = max(28.0, min(92.0, math.sqrt(1.3 * 9.81 / max(curv, 1e-4)) * 3.6))
+            pace = 1.0 + 0.025 * math.sin(self.laps_done * 1.9 + 0.4)
+            target = max(26.0, min(104.0, math.sqrt(0.75 * 9.81 / max(curv, 1e-4)) * 3.6)) * pace
             accel = 22.0 if target > self.speed else -45.0
             new_speed = self.speed + accel * dt
             if (accel > 0 and new_speed > target) or (accel < 0 and new_speed < target):
                 new_speed = target
-            self.tps = max(0.0, min(100.0, (60.0 + 40.0 * (target - self.speed) / 10.0) if accel > 0 else 0.0))
+            if abs(target - self.speed) < 0.5:
+                self.tps = 38.0 + n(0, 0.6)
+            else:
+                self.tps = max(0.0, min(100.0, (60.0 + 40.0 * (target - self.speed) / 10.0) if accel > 0 else 0.0))
             self.speed = new_speed
-            self.theta = (self.theta + (self.speed / 3.6) * dt / ds) % (2 * math.pi)
+            theta = self.theta + (self.speed / 3.6) * dt / ds
+            if theta >= 2 * math.pi:
+                self.laps_done += 1
+            self.theta = theta % (2 * math.pi)
             self.heading = (90.0 - math.degrees(h1)) % 360.0
             self.g_lat = (self.speed / 3.6) ** 2 * curv / 9.81 * (1 if dh > 0 else -1)
             gear = min(5, 1 + int(self.speed // 22))
@@ -137,7 +147,7 @@ class SimCar:
             "inj_time_b": (1.8 + 6.5 * tps / 100.0) if running else 0.0,
             "trans_oil_temp": 20.0 + (self.engine_temp - 20.0) * 0.7,
             "trans_temp": 20.0 + (self.engine_temp - 20.0) * 0.6, "fuel_consumption": self.fuel_used,
-            "brake_pressure": 28.0 if (self.mode == "drive" and tps == 0.0) else 0.0,
+            "brake_pressure": 28.0 if (self.mode == "drive" and tps < 1.0) else 0.0,
             "gps_lat": self.lat, "gps_lon": self.lon, "gps_speed": self.speed, "gps_alt": 153.0,
             "gps_sats": 11, "gps_fix": 1, "battery": batt,
         }
@@ -146,6 +156,7 @@ class SimCar:
 
     def ecu_frames(self, ts: float) -> list[Frame]:
         out = []
+        self._ecu_seen = {k: self.values[k] for k in self._ecu_keys}
         for (cid, ext), defs in self.cfg.by_id.items():
             if not ext or not 0x14080600 <= cid <= 0x14080608:
                 continue
@@ -158,6 +169,7 @@ class SimCar:
 
     def daq_values(self) -> dict:
         v = dict(self.values)
+        v.update(self._ecu_seen)
         v["tx_count"] = self.tx_count & 0xFFFF
         v["can_count"] = self.can_count & 0xFFFF
         if self.fault == "daq_wrong":
