@@ -1,0 +1,125 @@
+# Gryphon master config. One list of every channel on the car.
+# Edit it in Gryphon Manager (Channels view) or by hand, then press Generate.
+# Generate writes the team DBC, the screen DBC, the firmware header and the app's signal list.
+version: 1
+name: FS27 current setup
+bus: {bitrate: 1000000}
+
+# Devices on the bus, used for the health lights. PDM and lambda IDs aren't known yet:
+# set them here or in Settings once they show up as "unknown device" in Raw frames.
+devices:
+  ecu: {label: "ECU (FT550 Lite)", ids: ["0x14080600-0x14080608"], extended: true, expected_hz: 10}
+  daq: {label: "DAQ (Ryland)", ids: ["0x600-0x603"], extended: false, expected_hz: 20}
+  pdm: {label: "PDM", ids: [], extended: false, expected_hz: 10}
+  lambda: {label: "Lambda unit", ids: [], extended: false, expected_hz: 10}
+  screen: {label: "Steering wheel screen", ids: [], extended: false, expected_hz: 0}
+
+# source types:
+#   ecu        FT550 simplified broadcast: id + slot 0-3 (four big-endian 16-bit values per frame)
+#   can        any other CAN frame: id, byte, bits, order (little/big), signed
+#   gps        a GPS field read by the DAQ
+#   daq        a value the DAQ makes itself
+#   daq_input  a spare input on the DAQ board
+# scale follows ft550_decoder.c (checked on the car). Where ftcan_packet.dbc disagrees, see "note".
+channels:
+  - {key: tps, name: "Throttle", group: Engine, source: {type: ecu, id: "0x14080600", slot: 0}, signed: true, scale: 0.1, units: "%", min: 0, max: 100, radio: fast, screen: true}
+  - {key: map, name: "Manifold pressure", group: Engine, source: {type: ecu, id: "0x14080600", slot: 1}, signed: true, scale: 0.001, units: "bar", min: 0, max: 3, radio: "off", screen: true}
+  - {key: air_temp, name: "Air temp", group: Engine, source: {type: ecu, id: "0x14080600", slot: 2}, signed: true, scale: 0.1, units: "C", min: -20, max: 80, radio: "off", screen: true}
+  - {key: engine_temp, name: "Engine temp", group: Engine, source: {type: ecu, id: "0x14080600", slot: 3}, signed: true, scale: 0.1, units: "C", min: -20, max: 130, radio: fast, screen: true}
+  - {key: oil_pressure, name: "Oil pressure", group: Pressures, source: {type: ecu, id: "0x14080601", slot: 0}, signed: true, scale: 0.001, units: "bar", min: 0, max: 10, radio: fast, screen: false}
+  - {key: fuel_pressure, name: "Fuel pressure", group: Pressures, source: {type: ecu, id: "0x14080601", slot: 1}, signed: true, scale: 0.001, units: "bar", min: 0, max: 10, radio: fast, screen: false}
+  - {key: water_pressure, name: "Water pressure", group: Pressures, source: {type: ecu, id: "0x14080601", slot: 2}, signed: true, scale: 0.001, units: "bar", min: 0, max: 5, radio: "off", screen: false}
+  - {key: gear, name: "Gear", group: Engine, source: {type: ecu, id: "0x14080601", slot: 3}, signed: true, scale: 1, units: "", min: -2, max: 10, radio: "off", screen: false}
+  - {key: lambda, name: "Lambda", group: Engine, source: {type: ecu, id: "0x14080602", slot: 0}, signed: true, scale: 0.001, units: "lambda", min: 0, max: 2, radio: "off", screen: false}
+  - {key: rpm, name: "RPM", group: Engine, source: {type: ecu, id: "0x14080602", slot: 1}, signed: false, scale: 1, units: "rpm", min: 0, max: 15000, radio: fast, screen: true}
+  - {key: oil_temp, name: "Oil temp", group: Engine, source: {type: ecu, id: "0x14080602", slot: 2}, signed: true, scale: 0.1, units: "C", min: -20, max: 160, radio: "off", screen: false}
+  - {key: pit_limit, name: "Pit limiter", group: Engine, source: {type: ecu, id: "0x14080602", slot: 3}, signed: true, scale: 1, units: "", min: 0, max: 1, radio: "off", screen: false}
+  - {key: wheel_speed_fr, name: "Wheel speed FR", group: Wheels, source: {type: ecu, id: "0x14080603", slot: 0}, signed: false, scale: 1, units: "km/h", min: 0, max: 300, radio: fast, screen: false}
+  - {key: wheel_speed_fl, name: "Wheel speed FL", group: Wheels, source: {type: ecu, id: "0x14080603", slot: 1}, signed: false, scale: 1, units: "km/h", min: 0, max: 300, radio: fast, screen: false}
+  - {key: wheel_speed_rr, name: "Wheel speed RR", group: Wheels, source: {type: ecu, id: "0x14080603", slot: 2}, signed: false, scale: 1, units: "km/h", min: 0, max: 300, radio: fast, screen: false}
+  - {key: wheel_speed_rl, name: "Wheel speed RL", group: Wheels, source: {type: ecu, id: "0x14080603", slot: 3}, signed: false, scale: 1, units: "km/h", min: 0, max: 300, radio: fast, screen: false}
+  - {key: tc_slip, name: "Traction control slip", group: Dynamics, source: {type: ecu, id: "0x14080604", slot: 0}, signed: true, scale: 1, units: "", radio: "off", screen: false}
+  - {key: tc_retard, name: "Traction control retard", group: Dynamics, source: {type: ecu, id: "0x14080604", slot: 1}, signed: true, scale: 1, units: "", radio: "off", screen: false, note: "ftcan_packet.dbc says x0.1 deg"}
+  - {key: tc_cut, name: "Traction control cut", group: Dynamics, source: {type: ecu, id: "0x14080604", slot: 2}, signed: true, scale: 1, units: "", radio: "off", screen: false}
+  - {key: heading, name: "Heading (ECU)", group: Dynamics, source: {type: ecu, id: "0x14080604", slot: 3}, signed: true, scale: 1, units: "", radio: fast, screen: false, note: "ftcan_packet.dbc says x0.1 deg"}
+  - {key: shock_fr, name: "Shock FR", group: Suspension, source: {type: ecu, id: "0x14080605", slot: 0}, signed: true, scale: 0.001, units: "V", min: 0, max: 5, radio: "off", screen: false}
+  - {key: shock_fl, name: "Shock FL", group: Suspension, source: {type: ecu, id: "0x14080605", slot: 1}, signed: true, scale: 0.001, units: "V", min: 0, max: 5, radio: "off", screen: false}
+  - {key: shock_rr, name: "Shock RR", group: Suspension, source: {type: ecu, id: "0x14080605", slot: 2}, signed: true, scale: 0.001, units: "V", min: 0, max: 5, radio: "off", screen: false}
+  - {key: shock_rl, name: "Shock RL", group: Suspension, source: {type: ecu, id: "0x14080605", slot: 3}, signed: true, scale: 0.001, units: "V", min: 0, max: 5, radio: "off", screen: false}
+  - {key: g_accel, name: "G-force accel", group: Dynamics, source: {type: ecu, id: "0x14080606", slot: 0}, signed: true, scale: 1, units: "", radio: "off", screen: false, note: "ftcan_packet.dbc says x0.01 G"}
+  - {key: g_lateral, name: "G-force lateral", group: Dynamics, source: {type: ecu, id: "0x14080606", slot: 1}, signed: true, scale: 1, units: "", radio: fast, screen: false, note: "ftcan_packet.dbc says x0.01 G"}
+  - {key: yaw_frontal, name: "Yaw rate frontal", group: Dynamics, source: {type: ecu, id: "0x14080606", slot: 2}, signed: true, scale: 1, units: "", radio: "off", screen: false, note: "ftcan_packet.dbc says x0.1 deg/s"}
+  - {key: yaw_lateral, name: "Yaw rate lateral", group: Dynamics, source: {type: ecu, id: "0x14080606", slot: 3}, signed: true, scale: 1, units: "", radio: "off", screen: false, note: "ftcan_packet.dbc says x0.1 deg/s"}
+  - {key: lambda_correction, name: "Lambda correction", group: Fuel, source: {type: ecu, id: "0x14080607", slot: 0}, signed: true, scale: 1, units: "", radio: "off", screen: false, note: "ftcan_packet.dbc says x0.1 %"}
+  - {key: fuel_flow, name: "Fuel flow", group: Fuel, source: {type: ecu, id: "0x14080607", slot: 1}, signed: true, scale: 0.01, units: "L/min", radio: "off", screen: false, note: "ftcan_packet.dbc says x0.1 L/h"}
+  - {key: inj_time_a, name: "Injection time bank A", group: Fuel, source: {type: ecu, id: "0x14080607", slot: 2}, signed: true, scale: 0.01, units: "ms", min: 0, max: 100, radio: "off", screen: false}
+  - {key: inj_time_b, name: "Injection time bank B", group: Fuel, source: {type: ecu, id: "0x14080607", slot: 3}, signed: true, scale: 0.01, units: "ms", min: 0, max: 100, radio: "off", screen: false}
+  - {key: trans_oil_temp, name: "Transmission oil temp", group: Engine, source: {type: ecu, id: "0x14080608", slot: 0}, signed: true, scale: 0.1, units: "C", min: -20, max: 160, radio: "off", screen: false, note: "ftcan_packet.dbc calls this Oil_Temp_2"}
+  - {key: trans_temp, name: "Transmission temp", group: Engine, source: {type: ecu, id: "0x14080608", slot: 1}, signed: true, scale: 0.1, units: "C", min: -20, max: 160, radio: "off", screen: false}
+  - {key: fuel_consumption, name: "Fuel used", group: Fuel, source: {type: ecu, id: "0x14080608", slot: 2}, signed: true, scale: 1, units: "L", radio: "off", screen: false}
+  - {key: brake_pressure, name: "Brake pressure", group: Pressures, source: {type: ecu, id: "0x14080608", slot: 3}, signed: true, scale: 0.001, units: "bar", min: 0, max: 200, radio: fast, screen: false}
+  - {key: gps_lat, name: "Latitude", group: GPS, source: {type: gps, field: latitude}, scale: 1, units: "deg", min: -90, max: 90, radio: fast, screen: true}
+  - {key: gps_lon, name: "Longitude", group: GPS, source: {type: gps, field: longitude}, scale: 1, units: "deg", min: -180, max: 180, radio: fast, screen: true}
+  - {key: gps_speed, name: "GPS speed", group: GPS, source: {type: gps, field: speed_kph}, scale: 1, units: "km/h", min: 0, max: 300, radio: fast, screen: true}
+  - {key: gps_alt, name: "Altitude", group: GPS, source: {type: gps, field: altitude}, scale: 1, units: "m", radio: fast, screen: false}
+  - {key: gps_sats, name: "Satellites", group: GPS, source: {type: gps, field: satellites}, scale: 1, units: "", min: 0, max: 50, radio: fast, screen: true}
+  - {key: gps_fix, name: "GPS fix", group: GPS, source: {type: gps, field: fix_valid}, scale: 1, units: "", min: 0, max: 1, radio: fast, screen: true}
+  - {key: battery, name: "Battery voltage", group: Electrics, source: {type: daq, field: battery_voltage}, scale: 1, units: "V", min: 0, max: 20, radio: fast, screen: true, note: "Reads 0 for now: not in the FT550 simplified broadcast. Needs FuelTech's standard packet or a divider on the DAQ."}
+  - {key: tx_count, name: "LoRa packets sent", group: DAQ, source: {type: daq, field: tx_count}, scale: 1, units: "", radio: fast, screen: true}
+  - {key: can_count, name: "ECU frames decoded by DAQ", group: DAQ, source: {type: daq, field: can_frame_count}, scale: 1, units: "", radio: fast, screen: true}
+
+# What the DAQ sends to the steering wheel screen (little-endian, standard IDs, 20 Hz).
+# This must match custom_packet.dbc, which is built into the screen project.
+screen_frames:
+  - id: "0x600"
+    name: GRYPHON_ENG_1
+    signals:
+      - {channel: rpm, name: Engine_RPM, byte: 0, bits: 16, signed: false, scale: 1, units: "RPM", min: 0, max: 15000}
+      - {channel: map, name: Manifold_Pres, byte: 2, bits: 16, signed: false, scale: 0.1, units: "kPa", min: 0, max: 300, convert: 100}
+      - {channel: engine_temp, name: Engine_Temp, byte: 4, bits: 16, signed: true, scale: 0.1, units: "C", min: -20, max: 150}
+      - {channel: tps, name: Throttle_Pos, byte: 6, bits: 16, signed: false, scale: 0.1, units: "%", min: 0, max: 100}
+  - id: "0x601"
+    name: GRYPHON_ENG_2
+    signals:
+      - {channel: battery, name: Battery_Voltage, byte: 0, bits: 16, signed: false, scale: 0.01, units: "V", min: 0, max: 20}
+      - {channel: air_temp, name: Air_Temp, byte: 2, bits: 16, signed: true, scale: 0.1, units: "C", min: -20, max: 150}
+  - id: "0x602"
+    name: GRYPHON_GPS_POS
+    signals:
+      - {channel: gps_lat, name: Latitude, byte: 0, bits: 32, signed: true, scale: 0.0000001, units: "deg", min: -90, max: 90}
+      - {channel: gps_lon, name: Longitude, byte: 4, bits: 32, signed: true, scale: 0.0000001, units: "deg", min: -180, max: 180}
+  - id: "0x603"
+    name: GRYPHON_META
+    signals:
+      - {channel: gps_speed, name: GPS_Speed, byte: 0, bits: 16, signed: false, scale: 0.1, units: "kph", min: 0, max: 300}
+      - {channel: gps_sats, name: Satellites, byte: 2, bits: 8, signed: false, scale: 1, units: "", min: 0, max: 50}
+      - {channel: gps_fix, name: Fix_Valid, byte: 3, bits: 8, signed: false, scale: 1, units: "bool", min: 0, max: 1}
+      - {channel: tx_count, name: LoRa_TX_Count, byte: 4, bits: 16, signed: false, scale: 1, units: "count", min: 0, max: 65535}
+      - {channel: can_count, name: CAN_RX_Count, byte: 6, bits: 16, signed: false, scale: 1, units: "count", min: 0, max: 65535}
+
+# The LoRa packet, in order. Matches combined_telemetry_packet_t in FS26-DAQ_fs27.c (68 bytes, little-endian).
+radio_packet:
+  magic: "0x46533236"
+  layout_version: 1
+  fields:
+    - {name: latitude, channel: gps_lat, type: f32}
+    - {name: longitude, channel: gps_lon, type: f32}
+    - {name: gps_speed_kph, channel: gps_speed, type: f32}
+    - {name: altitude, channel: gps_alt, type: f32}
+    - {name: satellites, channel: gps_sats, type: u8}
+    - {name: fix_valid, channel: gps_fix, type: u8}
+    - {name: rpm, channel: rpm, type: u16}
+    - {name: engine_temp, channel: engine_temp, type: f32}
+    - {name: tps, channel: tps, type: f32}
+    - {name: oil_pressure, channel: oil_pressure, type: f32}
+    - {name: fuel_pressure, channel: fuel_pressure, type: f32}
+    - {name: brake_pressure, channel: brake_pressure, type: f32}
+    - {name: battery_voltage, channel: battery, type: f32}
+    - {name: wheel_speed_fr, channel: wheel_speed_fr, type: u16}
+    - {name: wheel_speed_fl, channel: wheel_speed_fl, type: u16}
+    - {name: wheel_speed_rr, channel: wheel_speed_rr, type: u16}
+    - {name: wheel_speed_rl, channel: wheel_speed_rl, type: u16}
+    - {name: g_force_lateral, channel: g_lateral, type: f32}
+    - {name: heading, channel: heading, type: f32}
+    - {name: tx_count, channel: tx_count, type: u16}
+    - {name: can_frame_count, channel: can_count, type: u16}

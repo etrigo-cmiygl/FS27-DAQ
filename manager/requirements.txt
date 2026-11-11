@@ -1,0 +1,7 @@
+PySide6-Essentials>=6.7,<6.13
+pyqtgraph>=0.13.7
+python-can>=4.4,<5
+cantools>=39.4
+pyserial>=3.5
+PyYAML>=6.0
+numpy>=1.26
