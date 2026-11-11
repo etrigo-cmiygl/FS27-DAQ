@@ -69,7 +69,7 @@ are three, which usually means the DAQ board's own terminator is switched on and
 
 <h3>First time on a Windows laptop</h3>
 <ol>
-<li>Install the PEAK driver: download "Device driver setup for Windows" from
+<li>Install the PEAK driver: download "Device driver setup for Windows" (it covers Windows 11 on ARM too, for Parallels on Apple Silicon) from
 <a href="{PEAK_DRIVER_URL}">{PEAK_DRIVER_URL}</a> and run it, leaving PCAN-Basic ticked.</li>
 <li>Plug in the PCAN-USB. Its light comes on.</li>
 <li>In Parallels on a Mac: Devices &gt; USB &gt; PCAN-USB, so the adapter is given to Windows.</li>

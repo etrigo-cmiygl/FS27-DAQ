@@ -211,7 +211,7 @@ def export_csv(session: Path | str, cfg: MasterConfig, out_path: Path | str, ste
     idx = {k: 0 for k in keys}
     last: dict = {k: "" for k in keys}
     rows = 0
-    with open(out_path, "w", newline="", encoding="utf-8") as fh:
+    with open(out_path, "w", newline="", encoding="utf-8-sig") as fh:
         w = csv.writer(fh)
         w.writerow(["time_s"] + [f"{k} [{data['names'][k][1]}]" if data["names"][k][1] else k for k in keys])
         t = 0.0

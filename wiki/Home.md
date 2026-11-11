@@ -10,6 +10,9 @@ For the receiver that picks up the radio packets, see the [FS26-RCV wiki](https:
 - [Hardware Construction](Hardware-Construction.md)
 - [Telemetry Flow](Telemetry-Flow.md)
 - [Build and Deploy](Build-and-Deploy.md)
+- [Gryphon Manager](Gryphon-Manager.md), the laptop app (branch `gryphon-manager`)
+- [Receiver PKT format](Receiver-PKT-Format.md)
+- [DAQ settings protocol](DAQ-Settings-Protocol.md)
 
 ## What the firmware does
 

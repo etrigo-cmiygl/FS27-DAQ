@@ -21,6 +21,7 @@ DEFAULTS = {
     "pressure_units": "bar",
     "temp_units": "C",
     "pit_wall": False,
+    "text_size": 13,
     "alarm_sound": True,
     "check_updates": True,
     "pdm_ids": "",

@@ -18,6 +18,11 @@ def pick_font() -> str:
     return QFontDatabase.systemFont(QFontDatabase.GeneralFont).family()
 
 
+def apply_text_size(app, base: int) -> None:
+    from . import theme
+    app.setStyleSheet(theme.stylesheet(pick_font(), base))
+
+
 def create_app(argv=None):
     from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import QApplication
@@ -29,7 +34,8 @@ def create_app(argv=None):
     app.setApplicationVersion(__version__)
     app.setStyle("Fusion")
     app.setPalette(theme.palette())
-    app.setStyleSheet(theme.stylesheet(pick_font()))
+    from .core.settings import Settings
+    apply_text_size(app, int(Settings().get("text_size", 13) or 13))
     icon = asset_path("icon.png")
     if icon.exists():
         app.setWindowIcon(QIcon(str(icon)))

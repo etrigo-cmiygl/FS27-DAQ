@@ -31,7 +31,7 @@ def find_pico_drives() -> list[tuple[str, str]]:
         info = r / "INFO_UF2.TXT"
         try:
             if info.is_file():
-                text = info.read_text(errors="replace")
+                text = info.read_text(encoding="utf-8", errors="replace")
                 board = next((l.split(":", 1)[1].strip() for l in text.splitlines() if l.startswith("Board-ID")), "")
                 model = next((l.split(":", 1)[1].strip() for l in text.splitlines() if l.startswith("Model")), "")
                 out.append((str(r), board or model or "Pico"))

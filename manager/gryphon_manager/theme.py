@@ -18,9 +18,9 @@ STATUS_WORD = {"green": "OK", "amber": "Check", "red": "Fault", "grey": "Not con
 SERIES = ["#2FA36B", "#E0453A", "#F2F4F3", "#E0A23A", "#5AA9E6", "#B58CE0", "#7FD1B9", "#F28B6B"]
 
 
-def stylesheet(font_family: str) -> str:
+def stylesheet(font_family: str, base: int = 13) -> str:
     return f"""
-* {{ font-family: "{font_family}"; font-size: 13px; color: {TEXT}; }}
+* {{ font-family: "{font_family}"; font-size: {base}px; color: {TEXT}; }}
 QWidget {{ background: transparent; }}
 QMainWindow, QDialog, QMessageBox, QInputDialog, QFileDialog, QWidget#root {{ background: {BG}; }}
 QMessageBox QLabel {{ font-size: 14px; }}
@@ -59,7 +59,7 @@ QPushButton#primary[connected="true"] {{ background: {RAISED}; border: 1px solid
 QPushButton#danger {{ background: {RED}; border: 1px solid {RED_BRIGHT}; font-weight: 600; }}
 QPushButton#record {{ padding: 9px 16px; font-weight: 600; }}
 QPushButton#record[recording="true"] {{ background: {RED}; border: 1px solid {RED_BRIGHT}; }}
-QPushButton#nav {{ text-align: left; padding: 9px 14px; border: none; border-radius: 7px; background: transparent; color: {TEXT_DIM}; font-size: 13px; }}
+QPushButton#nav {{ text-align: left; padding: 9px 14px; border: none; border-radius: 7px; background: transparent; color: {TEXT_DIM}; font-size: {base}px; }}
 QPushButton#nav:hover {{ background: {RAISED}; color: {TEXT}; }}
 QPushButton#nav:checked {{ background: {GREEN}; color: {TEXT}; font-weight: 600; }}
 QPushButton#link {{ background: transparent; border: none; color: {GREEN_BRIGHT}; padding: 2px; text-align: left; }}

@@ -94,6 +94,11 @@ class SettingsView(View):
         self.pressure.addItem("bar", "bar")
         self.pressure.addItem("psi", "psi")
         self.pressure.setCurrentIndex(max(0, self.pressure.findData(s["pressure_units"])))
+        self.text_size = QComboBox()
+        for text, px in (("Normal", 13), ("Large", 15), ("Extra large", 17)):
+            self.text_size.addItem(text, px)
+        self.text_size.setCurrentIndex(max(0, self.text_size.findData(int(s.get("text_size", 13) or 13))))
+        self.text_size.setToolTip("Makes labels, tables and buttons bigger. Handy on a small laptop in the sun.")
         self.pit = QCheckBox("Pit wall mode: bigger numbers, no sidebar (F10)")
         self.pit.setChecked(bool(s["pit_wall"]))
         self.sound = QCheckBox("Play a sound when an alarm goes off")
@@ -101,6 +106,7 @@ class SettingsView(View):
         lf = QFormLayout()
         lf.addRow("Pressure units", self.pressure)
         lf.addRow("Temperatures", label("°C", "dim"))
+        lf.addRow("Text size", self.text_size)
         lf.addRow(self.pit)
         lf.addRow(self.sound)
         look.setLayout(lf)
@@ -122,7 +128,7 @@ class SettingsView(View):
 
         for w in (self.auto_rec, self.pit, self.sound, self.check_upd):
             w.clicked.connect(self._save)
-        for w in (self.pcan_channel, self.baud, self.fmt, self.pressure):
+        for w in (self.pcan_channel, self.baud, self.fmt, self.pressure, self.text_size):
             w.currentIndexChanged.connect(self._save)
         self.driver.editingFinished.connect(self._save)
         self.ecu_hz.editingFinished.connect(self._save)
@@ -188,6 +194,11 @@ class SettingsView(View):
         pit_changed = s["pit_wall"] != self.pit.isChecked()
         s["pit_wall"] = self.pit.isChecked()
         s["alarm_sound"] = self.sound.isChecked()
+        if s.get("text_size", 13) != self.text_size.currentData():
+            s["text_size"] = self.text_size.currentData()
+            from PySide6.QtWidgets import QApplication
+            from ...app import apply_text_size
+            apply_text_size(QApplication.instance(), int(s["text_size"]))
         s["check_updates"] = self.check_upd.isChecked()
         s["extra_dbcs"] = [self.dbc_list.item(i).text() for i in range(self.dbc_list.count())]
         self.hub.settings_changed()

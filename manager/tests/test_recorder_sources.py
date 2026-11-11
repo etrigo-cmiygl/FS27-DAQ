@@ -45,7 +45,7 @@ def test_analyse_and_csv_export(cfg, tmp_path):
     assert "radio.rpm" in a["series"] and "usb.rpm" in a["series"] and len(a["track"]) > 10
     out = tmp_path / "out.csv"
     rows = export_csv(d, cfg, out)
-    with open(out, newline="") as fh:
+    with open(out, newline="", encoding="utf-8-sig") as fh:
         table = list(csv.reader(fh))
     assert rows == len(table) - 1 and rows >= 195
     head = table[0]

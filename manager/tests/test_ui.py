@@ -143,3 +143,20 @@ def test_channel_editor_generates_files(win, tmp_path):
         (out / name).write_text(text, encoding="utf-8")
     assert "Steering_angle" in (out / "gryphon_fs27.dbc").read_text(encoding="utf-8")
     assert "GRYPHON_CH_STEER" in (out / "gryphon_channels.h").read_text(encoding="utf-8")
+
+
+def test_ui_keeps_up_with_2000_frames_a_second(win):
+    hub = win.hub
+    hub.connect_source("sim", parts="can", stress_fps=2000)
+    win.show_view("raw")
+    pump(win, 3.5)
+    assert hub.engine.frame_rate > 2000
+    assert hub.q.qsize() < 500
+    assert len(hub.engine.frames) >= 30
+
+
+def test_text_size_setting(win):
+    from gryphon_manager.app import apply_text_size
+    apply_text_size(win.app, 17)
+    assert "font-size: 17px" in win.app.styleSheet()
+    apply_text_size(win.app, 13)

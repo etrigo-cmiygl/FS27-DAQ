@@ -6,7 +6,7 @@ import time
 
 from .model import Frame, SourceStatus
 
-PEAK_DRIVER_URL = "https://www.peak-system.com/Drivers.523.0.html?&L=1"
+PEAK_DRIVER_URL = "https://www.peak-system.com/support/downloads/drivers/driver-packages/"
 
 
 def friendly_can_error(interface: str, exc: Exception) -> str:
@@ -16,7 +16,7 @@ def friendly_can_error(interface: str, exc: Exception) -> str:
         if "pcanbasic" in low or "library" in low or "dll" in low or "could not be loaded" in low \
                 or isinstance(exc, (ImportError, OSError, NotImplementedError)):
             return ("The PEAK driver isn't installed, so Windows can't talk to the PCAN-USB.\n"
-                    f"Download and run the 'Device driver setup' from {PEAK_DRIVER_URL} "
+                    f"Download and run 'Device driver setup for Windows' from {PEAK_DRIVER_URL} "
                     "(leave PCAN-Basic ticked), then unplug the adapter, plug it back in and press Connect.")
         return ("Couldn't open the PCAN-USB. Is it plugged in, and not open in PCAN-View or another app? "
                 "In Parallels, check Devices > USB so the adapter is given to Windows.\n"
