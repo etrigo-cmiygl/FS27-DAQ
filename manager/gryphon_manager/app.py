@@ -43,11 +43,84 @@ def create_app(argv=None):
     return app
 
 
-def create_window(hub=None):
+class CrashReporter:
+    """Shows a dialog with details to copy when something unexpected goes wrong. The app keeps running."""
+
+    def __init__(self, show_dialogs: bool = True):
+        from PySide6.QtCore import QObject, Signal
+
+        class Bridge(QObject):
+            crashed = Signal(str)
+
+        self.bridge = Bridge()
+        self.bridge.crashed.connect(self._show)
+        self.show_dialogs = show_dialogs
+        self.window = None
+        self.reports: list[str] = []
+        self.dialog = None
+
+    def report(self, details: str) -> None:
+        self.bridge.crashed.emit(details)
+
+    def _show(self, details: str) -> None:
+        self.reports.append(details)
+        if self.window is not None:
+            try:
+                self.window.hub.settings.save()
+            except Exception:
+                pass
+        if not self.show_dialogs or len(self.reports) > 3 or (self.dialog is not None and self.dialog.isVisible()):
+            return
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices, QFontDatabase
+        from PySide6.QtWidgets import QApplication, QDialog, QPlainTextEdit
+        from .core.applog import log_path
+        from .ui.widgets import button, hbox, label, vbox
+        dlg = QDialog(self.window)
+        dlg.setWindowTitle("Something went wrong")
+        dlg.resize(760, 480)
+        text = QPlainTextEdit(details)
+        text.setReadOnly(True)
+        text.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        copied = label("", "dim")
+
+        def copy():
+            QApplication.clipboard().setText(details)
+            copied.setText("Copied. Paste it into a message.")
+
+        dlg.setLayout(vbox(
+            label("Something went wrong", "h1"),
+            label("The app hit an unexpected error, but it's still running and your settings and any recording "
+                  "are safe. Press Copy details and send them on, so it can be fixed. The same details are in "
+                  "the log file.", wrap=True),
+            (text, 1),
+            hbox(button("Copy details", copy, "primary"),
+                 button("Open the log folder",
+                        lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_path().parent)))),
+                 copied, None, button("Keep going", dlg.accept)),
+            margins=(18, 18, 18, 18)))
+        self.dialog = dlg
+        dlg.show()
+
+
+def create_window(hub=None, show_crash_dialogs: bool = True):
+    from .core import applog
     from .ui.hub import Hub
     from .ui.main_window import MainWindow
+    reporter = CrashReporter(show_crash_dialogs)
+    applog.setup(reporter.report)
     hub = hub or Hub()
-    return MainWindow(hub)
+    win = MainWindow(hub)
+    win.crash_reporter = reporter
+    reporter.window = win
+    hub.notice.connect(lambda level, text: applog.log.log(
+        40 if level == "error" else 30 if level == "warn" else 20, "notice: %s", text.replace("\n", " | ")))
+    hub.state_changed.connect(lambda: applog.log.info(
+        "state: %s, source: %s %s%s", hub.state, hub.kind, hub.label,
+        ", recording" if hub.recorder.active else ""))
+    hub.alarm.connect(lambda ev: applog.log.warning("alarm %s: %s (%s)", "raised" if ev.raised else "cleared",
+                                                    ev.name, ev.text))
+    return win
 
 
 def selftest(png: str | None) -> int:

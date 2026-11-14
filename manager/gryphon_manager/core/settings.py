@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 
 from .alarms import DEFAULT_RULES
 from .paths import settings_path
@@ -49,20 +50,39 @@ class Settings:
         self.load()
 
     def load(self) -> None:
-        try:
-            with open(self.path, "r", encoding="utf-8") as fh:
-                stored = json.load(fh)
-        except (OSError, ValueError):
+        stored = None
+        for path in (self.path, self.path.with_suffix(".bak")):
+            try:
+                with open(path, "r", encoding="utf-8") as fh:
+                    stored = json.load(fh)
+                if isinstance(stored, dict):
+                    break
+                stored = None
+            except (OSError, ValueError):
+                continue
+        if not stored:
             return
         for k, v in stored.items():
             if v is not None or k not in DEFAULTS:
                 self.data[k] = v
 
     def save(self) -> None:
+        """Writes to a temporary file first, so a crash or power cut mid-save can't leave a broken file."""
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.path, "w", encoding="utf-8") as fh:
+            tmp = self.path.with_suffix(".tmp")
+            with open(tmp, "w", encoding="utf-8") as fh:
                 json.dump(self.data, fh, indent=2)
+                fh.flush()
+                os.fsync(fh.fileno())
+            if self.path.exists():
+                try:
+                    with open(self.path, "r", encoding="utf-8") as fh:
+                        json.load(fh)
+                    os.replace(self.path, self.path.with_suffix(".bak"))
+                except (OSError, ValueError):
+                    pass
+            os.replace(tmp, self.path)
         except OSError:
             pass
 
