@@ -52,6 +52,43 @@ measured rate, bus health, the ECU broadcast-rate check, and whether the DAQ's s
 <p class="dim">Keys: Space record, F11 full screen, F10 pit wall mode (big numbers, no sidebar), F1 this page,
 Ctrl+1 to Ctrl+9 switch views.</p>
 
+<h2 id="first">First car test checklist</h2>
+<p>Work down this the first time the app meets the real car. It only listens, so nothing here can upset the car.</p>
+<table cellspacing="0">
+<tr><th>Step</th><th>What to do</th><th>What you should see</th></tr>
+<tr><td>1. Driver</td><td>Install PEAK's "Device driver setup for Windows" (PCAN-Basic ticked) before the day.</td>
+<td>No "driver isn't installed" message when you press Connect.</td></tr>
+<tr><td>2. Parallels</td><td>Plug in the PCAN-USB, then Devices &gt; USB &gt; PCAN-USB so Windows gets it, not the Mac.</td>
+<td>The adapter's light comes on. Windows makes its "device connected" sound.</td></tr>
+<tr><td>3. Pinout</td><td>Car off. Multimeter across pins 7 and 2 of C41.</td>
+<td>About 60 ohm. Pin 7 is CAN H, pin 2 CAN L, pin 3 ground. If it isn't about 60, stop and see Wiring below.</td></tr>
+<tr><td>4. Connect</td><td>Plug the PCAN into C41, ignition on, source "Car (CAN cable)", Connect.</td>
+<td>Pill says Connected, with "Listen-only" in green next to it. Raw frames starts filling.</td></tr>
+<tr><td>5. Record</td><td>Press Record (Space) straight away and leave it running.</td>
+<td>The Record button turns red. Whatever happens, the log can be looked at afterwards.</td></tr>
+<tr><td>6. Garage</td><td>Open Garage and read the five device lights.</td><td>See the table below.</td></tr>
+<tr><td>7. Car test</td><td>Run the Car test view and save the report.</td>
+<td>A folder in Documents / Gryphon Manager / test reports with report.pdf and the raw log.</td></tr>
+</table>
+<h3>What each device light should show</h3>
+<table cellspacing="0">
+<tr><th>Light</th><th>Expected on the car today</th><th>If not</th></tr>
+<tr><td>ECU</td><td>Amber, "Slow: about 1 Hz", until the broadcast rate is raised in FTManager. Green after that.</td>
+<td>Red means no ECU frames: ignition off, or the wrong pins.</td></tr>
+<tr><td>DAQ</td><td>Green, about 20 Hz, all 4 frames.</td>
+<td>Red: DAQ not powered, or its sends are failing. Check with "DAQ over USB".</td></tr>
+<tr><td>PDM</td><td>Grey, "ID not known yet".</td>
+<td>In Raw frames, right-click the amber unknown IDs and say which device sends them.</td></tr>
+<tr><td>Lambda unit</td><td>Grey, "ID not known yet".</td><td>Same as the PDM.</td></tr>
+<tr><td>Screen</td><td>Green once the DAQ is green: it means the DAQ is feeding it.</td>
+<td>The screen only listens, so check what it shows by eye (step 5 of Car test).</td></tr>
+</table>
+<p>Also expected today: Battery reads 0 (amber tile), and the DAQ check may show "waiting" for a moment between
+ECU frames while the ECU is at 1 Hz.</p>
+<p>If something goes wrong: unplugging the adapter shows a red message and the app reconnects by itself when
+it's plugged back in. If a "Something went wrong" window appears, press Copy details and send them on. The same
+details are in Documents / Gryphon Manager / logs.</p>
+
 <h2 id="wiring">Wiring the PCAN-USB to the car</h2>
 <p>The team's adapter is a PEAK PCAN-USB, opto-isolated (IPEH-002022). It plugs into the car's debug port
 <b>C41</b>, a 9-pin D-sub (DB9). The bus runs at 1 Mbps.</p>
@@ -126,12 +163,13 @@ is its LoRa packet count going up (DAQ USB)?</td></tr>
 <p>Recordings: <code>Documents / Gryphon Manager / sessions</code><br>
 Car test reports: <code>Documents / Gryphon Manager / test reports</code><br>
 Settings: <code>Documents / Gryphon Manager / settings.json</code><br>
+App log (send this if something breaks): <code>Documents / Gryphon Manager / logs</code><br>
 Code, wiki and new versions: <a href="https://github.com/{REPO}">github.com/{REPO}</a> (branch gryphon-manager,
 folder manager)</p>
 <p class="dim">Gryphon Manager {__version__}</p>
 """
 
-SECTIONS = [("Start here", "start"), ("Views", "views"), ("Wiring and pinout", "wiring"),
+SECTIONS = [("Start here", "start"), ("First car test", "first"), ("Views", "views"), ("Wiring and pinout", "wiring"),
             ("Add a sensor", "sensor"), ("Flash the DAQ", "flash"), ("Troubleshooting", "trouble")]
 
 

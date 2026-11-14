@@ -9,6 +9,11 @@ on:
       - "*.dbc"
       - ".github/workflows/gryphon-manager.yml"
   workflow_dispatch:
+    inputs:
+      release_dry_run:
+        description: "Also make a DRAFT release with the zip (a dry run of the release step, no tag needed)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -88,3 +93,12 @@ jobs:
           files: manager/GryphonManager-windows.zip
           name: Gryphon Manager ${{ github.ref_name }}
           generate_release_notes: true
+      - name: Release dry run (draft release, manual trigger only)
+        if: github.event_name == 'workflow_dispatch' && inputs.release_dry_run
+        uses: softprops/action-gh-release@v2
+        with:
+          files: manager/GryphonManager-windows.zip
+          tag_name: manager-dry-run
+          target_commitish: ${{ github.sha }}
+          name: Gryphon Manager dry run (delete me)
+          draft: true
