@@ -417,6 +417,8 @@ class MainWindow(QMainWindow):
         e = hub.engine
         if hub.state == "connecting":
             self.pill.set("Connecting...", "amber")
+        elif hub.state == "reconnecting":
+            self.pill.set("Reconnecting...", "red")
         elif hub.state == "connected":
             if hub.kind == "replay":
                 self.pill.set("Replaying", "green")

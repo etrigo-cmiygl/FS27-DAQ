@@ -45,6 +45,11 @@ class Hub(QObject):
         self.last_error = ""
         self.connected_at = 0.0
         self.recorder = Recorder()
+        self._wanted = None
+        self._was_connected = False
+        self._resume_recording = False
+        self._retry_at = 0.0
+        self.retry_seconds = 2.0
         self.trace: deque = deque(maxlen=4000)
         self.trace_enabled = False
         self.trace_serial = 0
@@ -92,9 +97,25 @@ class Hub(QObject):
     def connected(self) -> bool:
         return self.state == "connected"
 
+    def _make_source(self, kind: str, opts: dict):
+        s = self.settings
+        if kind == "can":
+            iface = opts.get("interface") or s["can_interface"]
+            channel = opts.get("channel") or (s["slcan_port"] if iface == "slcan" else s["can_channel"])
+            return CanSource(self.q, iface, channel, self.engine.bitrate, listen_only=not s["allow_transmit"])
+        if kind in ("radio", "daq"):
+            port = opts.get("port") or s["receiver_port" if kind == "radio" else "daq_port"]
+            return SerialSource(self.q, port, int(s["serial_baud"]), kind)
+        if kind == "sim":
+            return SimSource(self.q, self.cfg, parts=opts.get("parts", s["sim_parts"]),
+                             mode=opts.get("mode", s["sim_mode"]), fault=opts.get("fault", s["sim_fault"]),
+                             stress_fps=opts.get("stress_fps", 0), warmup=opts.get("warmup", 0.0))
+        if kind == "replay":
+            return ReplaySource(self.q, opts["path"], opts.get("speed", 1.0))
+        return None
+
     def connect_source(self, kind: str, **opts) -> None:
         self.disconnect_source()
-        s = self.settings
         self.q = queue.Queue()
         self.kind = kind
         self.last_error = ""
@@ -102,27 +123,18 @@ class Hub(QObject):
         self.trace.clear()
         self.daq_log.clear()
         self.engine.set_sim_devices(SIM_DEVICES if kind == "sim" else {})
-        if kind == "can":
-            iface = opts.get("interface") or s["can_interface"]
-            channel = opts.get("channel") or (s["slcan_port"] if iface == "slcan" else s["can_channel"])
-            self.source = CanSource(self.q, iface, channel, self.engine.bitrate,
-                                    listen_only=not s["allow_transmit"])
-        elif kind in ("radio", "daq"):
-            port = opts.get("port") or s["receiver_port" if kind == "radio" else "daq_port"]
-            self.source = SerialSource(self.q, port, int(s["serial_baud"]), kind)
-        elif kind == "sim":
-            self.source = SimSource(self.q, self.cfg, parts=opts.get("parts", s["sim_parts"]),
-                                    mode=opts.get("mode", s["sim_mode"]), fault=opts.get("fault", s["sim_fault"]),
-                                    stress_fps=opts.get("stress_fps", 0), warmup=opts.get("warmup", 0.0))
-        elif kind == "replay":
-            self.source = ReplaySource(self.q, opts["path"], opts.get("speed", 1.0))
-        else:
+        self.source = self._make_source(kind, opts)
+        if self.source is None:
             return
+        self._wanted = (kind, dict(opts))
+        self._was_connected = False
+        self._resume_recording = False
         self.state = "connecting"
         self.source.start()
         self.state_changed.emit()
 
     def disconnect_source(self) -> None:
+        self._wanted = None
         if self.recorder.active:
             self.stop_recording()
         src, self.source = self.source, None
@@ -135,6 +147,35 @@ class Hub(QObject):
             self.engine.can_expected = False
             self.engine.connected_since = 0.0
             self.state_changed.emit()
+
+    def _source_ended(self) -> None:
+        """The source stopped by itself: unplugged, or it never opened."""
+        was_recording = self.recorder.active
+        if was_recording:
+            self.stop_recording()
+        self.source = None
+        self.engine.can_expected = False
+        self.engine.connected_since = 0.0
+        self.engine.alarms.active.clear()
+        wanted = self._wanted
+        if wanted and wanted[0] in ("can", "radio", "daq") and self._was_connected:
+            if self.state != "reconnecting":
+                self._resume_recording = was_recording
+                self.notice.emit("error", (self.last_error.split("\n")[0] or "The connection was lost.")
+                                 + " Trying to reconnect: plug it back in, or press Disconnect to stop."
+                                 + (" The recording up to this point is saved." if was_recording else ""))
+            self.state = "reconnecting"
+            self._retry_at = time.time() + self.retry_seconds
+        else:
+            self._wanted = None
+            self.state = "disconnected"
+        self.state_changed.emit()
+
+    def _retry(self) -> None:
+        kind, opts = self._wanted
+        self._retry_at = 0.0
+        self.source = self._make_source(kind, opts)
+        self.source.start()
 
     def now(self) -> float:
         return self.source.now() if self.source is not None else time.time()
@@ -205,6 +246,11 @@ class Hub(QObject):
             elif kind == "status":
                 pipe.feed(kind, payload)
             elif kind == "opened":
+                if self.state == "reconnecting":
+                    self.notice.emit("info", "Reconnected.")
+                    if self._resume_recording:
+                        self.start_recording("after reconnect")
+                self._was_connected = True
                 self.state = "connected"
                 self.label = payload
                 self.connected_at = time.time()
@@ -214,20 +260,20 @@ class Hub(QObject):
                 self.state_changed.emit()
             elif kind == "error":
                 self.last_error = payload
-                self.notice.emit("error", payload)
+                losing = (self._was_connected and self._wanted is not None
+                          and self._wanted[0] in ("can", "radio", "daq") and not payload.startswith("Couldn't send"))
+                if not losing:
+                    self.notice.emit("error", payload)
             elif kind == "ended":
-                if self.recorder.active:
-                    self.stop_recording()
-                self.source = None
-                self.state = "disconnected"
-                self.engine.can_expected = False
-                self.engine.connected_since = 0.0
-                self.state_changed.emit()
+                if self._wanted is not None or self.state != "disconnected":
+                    self._source_ended()
             elif kind == "reset":
                 pipe.reset()
                 self._after_reset()
             elif kind == "finished":
                 self.replay_finished.emit()
+        if self.state == "reconnecting" and self.source is None and self._retry_at and time.time() >= self._retry_at:
+            self._retry()
         self.engine.tick(self.now())
         new = self.engine.alarms.take_new()
         for ev in new:

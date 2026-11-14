@@ -32,7 +32,11 @@ def unpack_packet(cfg: MasterConfig, raw: bytes) -> dict | None:
     fields = cfg.radio_struct.unpack(raw)
     if fields[0] != cfg.radio_magic:
         return None
-    return {channel: fields[i + 1] for i, (name, channel, ftype) in enumerate(cfg.radio_fields)}
+    out = {channel: fields[i + 1] for i, (name, channel, ftype) in enumerate(cfg.radio_fields)}
+    for v in out.values():
+        if isinstance(v, float) and (v != v or abs(v) > 1e12):
+            return None
+    return out
 
 
 def format_pkt_line(raw: bytes, rssi: int, snr: int) -> str:

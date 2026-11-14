@@ -365,6 +365,7 @@ class Engine:
         if lat is not None and lon is not None and v.get("gps_fix", 1):
             if self._add_track(p.ts, lat, lon, v.get("gps_speed", 0.0) or 0.0) and lost_here:
                 r.loss_points.append((lat, lon))
+                del r.loss_points[:-2000]
                 if len(self.track) >= 2:
                     prev = self.track[-2]
                     r.loss_points.append((prev[1], prev[2]))
