@@ -186,11 +186,11 @@ class GarageView(View):
                     st, text = e.daq_usb_health()
                     chip.set(st, text.split(". ")[0] + ".", "from the DAQ's own [CAN] line")
                 elif key == "ecu":
-                    rx = e.daq_can.get("rx")
+                    rx = e.daq_rx()[0]
                     if rx is None:
                         chip.set("grey", "Waiting for the DAQ...", "")
-                    elif e.daq_rx_rate > 0:
-                        chip.set("green", f"The DAQ is decoding it: {e.daq_rx_rate / 9:.1f} Hz",
+                    elif e.daq_rx()[1] > 0:
+                        chip.set("green", f"The DAQ is decoding it: {e.daq_rx()[1] / 9:.1f} Hz",
                                  f"{rx} ECU frames decoded so far")
                     else:
                         chip.set("red", "The DAQ isn't receiving ECU frames", f"count stuck at {rx}")
@@ -278,11 +278,11 @@ class GarageView(View):
             self.usb_text.setText(e.bus_detail)
 
         if usb_only:
-            rate = e.daq_rx_rate / 9.0
+            rate = e.daq_rx()[1] / 9.0
             exp = e.devices["ecu"].expected or 10.0
-            self.ecu.set_status("grey" if not e.daq_can else ("green" if rate >= 0.5 * exp else "amber"))
+            self.ecu.set_status("grey" if e.daq_rx()[0] is None else ("green" if rate >= 0.5 * exp else "amber"))
             self.ecu_text.setText(
-                "Waiting for the DAQ's [CAN] line." if not e.daq_can else
+                "Waiting for the DAQ's debug lines." if e.daq_rx()[0] is None else
                 f"Going by the DAQ's receive counter, each ECU frame arrives about {rate:.1f} times a second "
                 f"(expected about {exp:g})." + ("" if rate >= 0.5 * exp else
                                                 " Fix it in FTManager: Sensors and Calibrations > CAN communication."))

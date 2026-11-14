@@ -180,6 +180,8 @@ class Engine:
         self.daq_can: dict = {}
         self.daq_can_ts = 0.0
         self.daq_rx_rate = 0.0
+        self.daq_tx_ts = 0.0
+        self._txcan = deque(maxlen=16)
         self.daq_boot: list[str] = []
         self.daq_tx_fail = 0
         self.bus_state = ""
@@ -396,8 +398,22 @@ class Engine:
         elif d.kind == "TXFAIL":
             self.daq_tx_fail += 1
         else:
+            if d.kind == "TX" and "can_count" in d.values:
+                self.daq_tx_ts = d.ts
+                self._txcan.append((d.ts, d.values["can_count"]))
             for k, v in d.values.items():
                 self._set("usb." + k, d.ts, v, "DAQ USB")
+
+    def daq_rx(self) -> tuple[int | None, float]:
+        """ECU frames the DAQ has decoded, and how many a second. Uses the [CAN] line, or the CAN#
+        counter on the [TX] line for firmware that doesn't print [CAN]."""
+        if self.daq_can:
+            return self.daq_can.get("rx"), self.daq_rx_rate
+        if not self._txcan:
+            return None, 0.0
+        (t0, c0), (t1, c1) = self._txcan[0], self._txcan[-1]
+        rate = ((c1 - c0) & 0xFFFF) / (t1 - t0) if t1 - t0 >= 1.0 else 0.0
+        return c1, rate
 
     def on_status(self, s: SourceStatus) -> None:
         if s.state:
@@ -600,6 +616,9 @@ class Engine:
 
     def daq_usb_health(self) -> tuple[str, str]:
         if not self.daq_can or self.now - self.daq_can_ts > 5:
+            if self.daq_tx_ts and self.now - self.daq_tx_ts < 5:
+                return "grey", ("The DAQ is alive and sending radio packets. This firmware doesn't print a "
+                                "[CAN] line, so whether its CAN sends work can't be checked over USB.")
             return "grey", "No [CAN] line from the DAQ yet."
         return explain_daq_can(self.daq_can)
 

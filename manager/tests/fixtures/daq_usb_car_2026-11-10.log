@@ -1,0 +1,750 @@
+[DBG] TX #18: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #18: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#17 CAN#71
+[DBG] TX #19: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #19: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#18 CAN#71
+[DBG] TX #20: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #20: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#19 CAN#80
+[DBG] TX #21: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #21: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#20 CAN#80
+[DBG] TX #22: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #22: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#21 CAN#80
+[DBG] TX #23: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #23: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#22 CAN#89
+[DBG] TX #24: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #24: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#23 CAN#89
+[DBG] TX #25: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #25: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#24 CAN#98
+[DBG] TX #26: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #26: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#25 CAN#98
+[DBG] TX #27: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #27: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#26 CAN#107
+[DBG] TX #28: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #28: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#27 CAN#107
+[DBG] TX #29: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #29: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#28 CAN#107
+[DBG] TX #30: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #30: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#29 CAN#116
+[DBG] TX #31: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #31: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#30 CAN#116
+[DBG] TX #32: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #32: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#31 CAN#116
+[DBG] TX #33: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #33: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#32 CAN#125
+[DBG] TX #34: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #34: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#33 CAN#125
+[DBG] TX #35: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #35: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#34 CAN#134
+[DBG] TX #36: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #36: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#35 CAN#134
+[DBG] TX #37: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #37: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#36 CAN#142
+[DBG] TX #38: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #38: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#37 CAN#142
+[DBG] TX #39: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #39: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#38 CAN#142
+[DBG] TX #40: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #40: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#39 CAN#151
+[DBG] TX #41: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #41: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#40 CAN#151
+[DBG] TX #42: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #42: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#41 CAN#160
+[DBG] TX #43: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #43: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#42 CAN#160
+[DBG] TX #44: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #44: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#43 CAN#169
+[DBG] TX #45: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #45: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#44 CAN#169
+[DBG] TX #46: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #46: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#45 CAN#178
+[DBG] TX #47: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #47: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#46 CAN#178
+[DBG] TX #48: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #48: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#47 CAN#178
+[DBG] TX #49: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #49: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#48 CAN#187
+[DBG] TX #50: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #50: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#49 CAN#187
+[DBG] TX #51: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #51: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#50 CAN#196
+[DBG] TX #52: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #52: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#51 CAN#196
+[DBG] TX #53: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #53: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#52 CAN#205
+[DBG] TX #54: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #54: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#53 CAN#205
+[DBG] TX #55: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #55: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#54 CAN#205
+[DBG] TX #56: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #56: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#55 CAN#214
+[DBG] TX #57: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #57: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#56 CAN#214
+[DBG] TX #58: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #58: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#57 CAN#223
+[DBG] TX #59: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #59: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#58 CAN#223
+[DBG] TX #60: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #60: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#59 CAN#232
+[DBG] TX #61: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #61: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#60 CAN#232
+[DBG] TX #62: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #62: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#61 CAN#237
+[DBG] TX #63: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #63: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#62 CAN#241
+[DBG] TX #64: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #64: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#63 CAN#241
+[DBG] TX #65: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #65: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#64 CAN#250
+[DBG] TX #66: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #66: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#65 CAN#250
+[DBG] TX #67: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #67: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#66 CAN#259
+[DBG] TX #68: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #68: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#67 CAN#259
+[DBG] TX #69: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #69: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#68 CAN#268
+[DBG] TX #70: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #70: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#69 CAN#268
+[DBG] TX #71: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #71: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#70 CAN#268
+[DBG] TX #72: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #72: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#71 CAN#277
+[DBG] TX #73: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #73: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#72 CAN#277
+[DBG] TX #74: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #74: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#73 CAN#286
+[DBG] TX #75: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #75: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#74 CAN#286
+[DBG] TX #76: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #76: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#75 CAN#295
+[DBG] TX #77: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #77: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#76 CAN#295
+[DBG] TX #78: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #78: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#77 CAN#295
+[DBG] TX #79: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #79: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#78 CAN#303
+[DBG] TX #80: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #80: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#79 CAN#303
+[DBG] TX #81: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #81: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#80 CAN#311
+[DBG] TX #82: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #82: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#81 CAN#311
+[DBG] TX #83: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #83: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#82 CAN#319
+[DBG] TX #84: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #84: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#83 CAN#319
+[DBG] TX #85: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #85: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#84 CAN#328
+[DBG] TX #86: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #86: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#85 CAN#328
+[DBG] TX #87: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #87: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#86 CAN#328
+[DBG] TX #88: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #88: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#87 CAN#337
+[DBG] TX #89: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #89: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#88 CAN#337
+[DBG] TX #90: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #90: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#89 CAN#345
+[DBG] TX #91: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #91: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#90 CAN#345
+[DBG] TX #92: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #92: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#91 CAN#353
+[DBG] TX #93: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #93: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#92 CAN#353
+[DBG] TX #94: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #94: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#93 CAN#353
+[DBG] TX #95: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #95: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#94 CAN#362
+[DBG] TX #96: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #96: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#95 CAN#362
+[DBG] TX #97: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #97: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#96 CAN#371
+[DBG] TX #98: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #98: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#97 CAN#371
+[DBG] TX #99: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #99: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#98 CAN#379
+[DBG] TX #100: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #100: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#99 CAN#379
+[DBG] TX #101: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #101: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#100 CAN#387
+[DBG] TX #102: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #102: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#101 CAN#387
+[DBG] TX #103: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #103: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#102 CAN#387
+[DBG] TX #104: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #104: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#103 CAN#395
+[DBG] TX #105: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #105: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#104 CAN#395
+[DBG] TX #106: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #106: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#105 CAN#404
+[DBG] TX #107: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #107: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#106 CAN#404
+[DBG] TX #108: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #108: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#107 CAN#413
+[DBG] TX #109: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #109: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#108 CAN#413
+[DBG] TX #110: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #110: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#109 CAN#413
+[DBG] TX #111: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #111: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#110 CAN#421
+[DBG] TX #112: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #112: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#111 CAN#421
+[DBG] TX #113: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #113: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#112 CAN#430
+[DBG] TX #114: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #114: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#113 CAN#430
+[DBG] TX #115: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #115: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#114 CAN#439
+[DBG] TX #116: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #116: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#115 CAN#439
+[DBG] TX #117: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #117: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#116 CAN#444
+[DBG] TX #118: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #118: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#117 CAN#447
+[DBG] TX #119: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #119: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#118 CAN#447
+[DBG] TX #120: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #120: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#119 CAN#455
+[DBG] TX #121: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #121: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#120 CAN#455
+[DBG] TX #122: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #122: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#121 CAN#464
+[DBG] TX #123: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #123: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#122 CAN#464
+[DBG] TX #124: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #124: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#123 CAN#473
+[DBG] TX #125: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #125: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#124 CAN#473
+[DBG] TX #126: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #126: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#125 CAN#473
+[DBG] TX #127: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #127: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#126 CAN#482
+[DBG] TX #128: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #128: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#127 CAN#482
+[DBG] TX #129: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #129: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#128 CAN#491
+[DBG] TX #130: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #130: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#129 CAN#491
+[DBG] TX #131: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #131: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#130 CAN#500
+[DBG] TX #132: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #132: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#131 CAN#500
+[DBG] TX #133: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #133: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#132 CAN#500
+[DBG] TX #134: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #134: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#133 CAN#509
+[DBG] TX #135: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #135: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#134 CAN#509
+[DBG] TX #136: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #136: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#135 CAN#517
+[DBG] TX #137: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #137: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#136 CAN#517
+[DBG] TX #138: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #138: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#137 CAN#526
+[DBG] TX #139: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #139: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#138 CAN#526
+[DBG] TX #140: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #140: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#139 CAN#535
+[DBG] TX #141: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #141: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#140 CAN#535
+[DBG] TX #142: Starting send, data_len=68
+[DBG] Radio status before TX: irq=0x00000000
+[DBG] TX: Radio set to TX mode
+[DBG] Radio status after set_tx: irq=0x00000000
+[DBG] TX #142: TX complete!
+[TX] RPM:0 | Batt:0.00 | TPS:0.000 | EngineTemp:20.0 | TX#141 CAN#535
