@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
+import time
 import traceback
 from pathlib import Path
 
@@ -130,10 +131,10 @@ def selftest(png: str | None) -> int:
     code = {"value": 1}
     try:
         app = create_app()
-        win = create_window()
+        win = create_window(show_crash_dialogs=False)
         win.hub.settings["first_run_done"] = True
         win.show()
-        win.hub.connect_source("sim", mode="drive", fault="none", parts="all")
+        win.hub.connect_source("sim", mode="off", fault="none", parts="all", warmup=20.0)
 
         def finish():
             try:
@@ -146,7 +147,8 @@ def selftest(png: str | None) -> int:
                 app.processEvents()
                 states = {k: d.status for k, d in e.devices.items()}
                 log.append(f"version {__version__}")
-                log.append(f"frames {e.total_frames}, radio packets {e.radio.received}, devices {states}")
+                sim_frames, sim_packets = e.total_frames, e.radio.received
+                log.append(f"frames {sim_frames}, radio packets {sim_packets}, devices {states}")
                 import importlib
                 missing = []
                 for mod in ("can.interfaces.pcan", "can.interfaces.pcan.basic", "can.interfaces.slcan",
@@ -169,7 +171,51 @@ def selftest(png: str | None) -> int:
                     kind, payload = probe_q.get()
                     if kind in ("error", "opened"):
                         log.append(f"PCAN probe ({kind}): " + str(payload).replace(chr(10), " | "))
-                ok = (e.total_frames > 300 and e.radio.received > 2 and not missing
+                from .core.cartest import STEPS, evaluate, suggest
+                ct = win.views["cartest"]
+                win.show_view("cartest")
+                ct.inputs["ohms"] = "60"
+                marks = []
+                for step in STEPS:
+                    if step.key in ("screen", "running", "ftmanager"):
+                        result = "skip"
+                    else:
+                        result = "pass" if suggest(evaluate(step.key, e, ct.inputs)) == "pass" else "fail"
+                    marks.append(f"{step.key}={result}")
+                    ct._mark(result)
+                    app.processEvents()
+                folder = ct._save()
+                app.processEvents()
+                html = (folder / "report.html").read_text(encoding="utf-8") if (folder / "report.html").exists() else ""
+                pdf = (folder / "report.pdf").stat().st_size if (folder / "report.pdf").exists() else 0
+                logged = any(p.is_dir() and (p / "can.blf").exists() for p in folder.iterdir())
+                report_ok = "Result: PASS" in html and pdf > 2000 and logged
+                log.append(f"car test: {' '.join(marks)}; report.html {len(html)} chars, report.pdf {pdf} bytes, "
+                           f"raw log {'saved' if logged else 'MISSING'}")
+                win.hub.disconnect_source()
+                from .core.recorder import list_sessions
+                win.hub.connect_source("sim", mode="drive", parts="all")
+                win.hub.start_recording("selftest")
+                end = time.time() + 1.5
+                while time.time() < end:
+                    app.processEvents()
+                win.hub.stop_recording()
+                sessions = list_sessions()
+                replay_ok = False
+                if sessions:
+                    win.hub.connect_source("replay", path=sessions[0]["path"], speed=8.0)
+                    end = time.time() + 1.5
+                    while time.time() < end:
+                        app.processEvents()
+                    replay_ok = win.hub.engine.total_frames > 100
+                log.append(f"record and replay: {len(sessions)} session, replayed frames {win.hub.engine.total_frames}")
+                crashes = win.crash_reporter.reports
+                log.append(f"unexpected errors: {len(crashes)}")
+                log.extend(crashes[:2])
+                from .core.applog import log_path
+                log.append(f"log file: {log_path().exists()}")
+                ok = (sim_frames > 300 and sim_packets > 2 and not missing and report_ok and replay_ok
+                      and not crashes and log_path().exists()
                       and all(v == "green" for v in states.values()))
                 log.append("SELFTEST PASS" if ok else "SELFTEST FAIL")
                 if png:
@@ -181,7 +227,7 @@ def selftest(png: str | None) -> int:
             win.hub.shutdown()
             app.quit()
 
-        QTimer.singleShot(4500, finish)
+        QTimer.singleShot(3500, finish)
         app.exec()
     except Exception:
         log.append(traceback.format_exc())
