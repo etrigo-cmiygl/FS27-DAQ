@@ -28,7 +28,7 @@ TYPE_SIZE = {"u8": 1, "i8": 1, "u16": 2, "i16": 2, "u32": 4, "i32": 4, "f32": 4}
 GPS_SOURCES = {"latitude": 40, "longitude": 41, "speed_kph": 42, "altitude": 43, "satellites": 44, "fix_valid": 45}
 DAQ_SOURCES = {"battery_voltage": 37, "tx_count": 50, "can_frame_count": 51}
 INPUT_NAMES = ["A0", "A1", "A2", "X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "F0", "F1", "F2", "F3"]
-INPUT_WHERE = {"A": "Pico pin (0 to 3.3 V)", "X": "ADS1115 board (0 to 5 V)", "F": "pulse input (Hz)"}
+INPUT_WHERE = {"A": "0 to 3.3 V", "X": "0 to 5 V", "F": "pulses"}
 INPUT_PINS = {"A0": "GP26", "A1": "GP27", "A2": "GP28", "X0": "ADS1115 0x48 A0", "X1": "ADS1115 0x48 A1",
               "X2": "ADS1115 0x48 A2", "X3": "ADS1115 0x48 A3", "X4": "ADS1115 0x49 A0", "X5": "ADS1115 0x49 A1",
               "X6": "ADS1115 0x49 A2", "X7": "ADS1115 0x49 A3", "F0": "GP16", "F1": "GP17", "F2": "GP18", "F3": "GP20"}
@@ -129,7 +129,7 @@ def input_config(src: dict) -> tuple:
         raise ValueError(f"'{sensor}' isn't a sensor type.")
     pulses = name[0] == "F"
     if pulses != (sensor in ("wheel_speed", "frequency")):
-        raise ValueError(f"{name} is a {INPUT_WHERE[name[0]]}, which can't take '{SENSORS[sensor]}'.")
+        raise ValueError(f"{name} reads {'pulses' if pulses else 'volts'}, so it can't take '{SENSORS[sensor]}'.")
     try:
         v = {key: float(src.get(key, usual)) for key, _, usual in SENSOR_PARAMS[sensor]}
     except (TypeError, ValueError):

@@ -83,14 +83,43 @@ ct = win.views["cartest"]
 win.show_view("cartest")
 ct._goto(0)
 shot("cartest", settle=0.6)
+ch = win.views["channels"]
 shot("channels", "channels")
-win.views["channels"].tabs.setCurrentIndex(1)
+ch.tabs.setCurrentIndex(1)
 shot("channels_screen_frames", settle=0.5)
-win.views["channels"].tabs.setCurrentIndex(0)
-d = win.views["daq"]
+ch.tabs.setCurrentIndex(0)
+
+from gryphon_manager.ui.views.channels import ChannelDialog  # noqa: E402
+
+brake = {"key": "brake_front", "name": "Front brake pressure", "group": "Driver", "scale": 1, "units": "bar",
+         "min": 0, "max": 160, "radio": "off", "screen": False,
+         "source": {"type": "daq_input", "input": "X0", "sensor": "linear", "v_min": 0.5, "v_max": 4.5,
+                    "value_min": 0.0, "value_max": 160.0, "divider": 1.0}}
+dlg = ChannelDialog(win, brake, True)
+dlg.setModal(False)
+dlg.show()
+wait(0.5)
+dlg.grab().save(str(out / "channel_dialog_sensor.png"))
+print("saved channel_dialog_sensor")
+dlg.close()
+ch.cfg.channels.append(brake)
+ch.cfg.channels.append({"key": "gearbox_temp", "name": "Gearbox oil temp", "group": "Engine", "scale": 1, "units": "C",
+                        "radio": "off", "screen": False,
+                        "source": {"type": "daq_input", "input": "A0", "sensor": "thermistor", "pullup": 10000.0,
+                                   "r25": 10000.0, "beta": 3950.0, "supply": 3.3}})
+ch.cfg.channels.append({"key": "wheel_fl_daq", "name": "Front left wheel (DAQ)", "group": "Wheels", "scale": 1,
+                        "units": "km/h", "radio": "off", "screen": False,
+                        "source": {"type": "daq_input", "input": "F0", "sensor": "wheel_speed", "teeth": 20.0,
+                                   "circumference_m": 1.6}})
+ch._changed()
 shot("daq_settings_before", "daq")
+win.show_view("channels")
+ch._send_to_daq(confirm=False)
+wait(4.0)
+d = win.views["daq"]
+win.show_view("daq")
 d._check()
-wait(1.5)
+wait(4.0)
 shot("daq_settings", settle=0.5)
 shot("firmware", "firmware")
 shot("help", "help")
