@@ -56,14 +56,19 @@ def list_releases(repo: str = REPO) -> list[dict]:
 
 
 def latest_firmware(releases: list[dict]) -> dict | None:
+    """The newest release with a .uf2. The main firmware is preferred over any '-fallback' file."""
     for rel in releases:
         if rel.get("draft"):
             continue
-        for asset in rel.get("assets", []):
-            if asset.get("name", "").lower().endswith(".uf2"):
-                return {"tag": rel.get("tag_name", ""), "name": asset["name"],
-                        "url": asset["browser_download_url"], "size": asset.get("size", 0),
-                        "published": rel.get("published_at", "")[:10], "notes": rel.get("body") or ""}
+        assets = [a for a in rel.get("assets", []) if a.get("name", "").lower().endswith(".uf2")]
+        if not assets:
+            continue
+        assets.sort(key=lambda a: ("fallback" in a["name"].lower(), a["name"].lower() != "fs27-daq.uf2"))
+        asset = assets[0]
+        return {"tag": rel.get("tag_name", ""), "name": asset["name"],
+                "url": asset["browser_download_url"], "size": asset.get("size", 0),
+                "published": rel.get("published_at", "")[:10], "notes": rel.get("body") or "",
+                "others": [{"name": a["name"], "url": a["browser_download_url"]} for a in assets[1:]]}
     return None
 
 

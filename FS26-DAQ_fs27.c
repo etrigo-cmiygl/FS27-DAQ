@@ -8,6 +8,10 @@
 #include "can_handler_fs27.h"
 #include "ft550_decoder.h"
 #include "src/mcp2515/MCP2515/MCP2515.h"
+#include "pico/flash.h"
+#include "hardware/sync.h"
+#include "daq_settings_fs27.h"
+#include "daq_flash_fs27.h"
 
 // Global mutex for printf
 mutex_t printf_mutex;
@@ -22,46 +26,42 @@ mutex_t printf_mutex;
 // Shared data between cores (protected by spin lock in GPS module)
 static volatile bool core1_running = false;
 
-// GPS telemetry packet structure with integrated CAN data
-typedef struct __attribute__((packed)) {
-    uint32_t magic;         // 4 bytes - 0x46533236 ("FS26")
-    
-    // GPS Data
-    float    latitude;      // 4 bytes
-    float    longitude;     // 4 bytes
-    float    gps_speed_kph; // 4 bytes
-    float    altitude;      // 4 bytes
-    uint8_t  satellites;    // 1 byte
-    uint8_t  fix_valid;     // 1 byte
-    
-    // CAN Data - Engine Parameters
-    uint16_t rpm;           // 2 bytes - RPM
-    float    engine_temp;   // 4 bytes - °C
-    float    tps;           // 4 bytes - Throttle Position %
-    
-    // CAN Data - Pressures & Fluids
-    float    oil_pressure;  // 4 bytes - Bar
-    float    fuel_pressure; // 4 bytes - Bar
-    float    brake_pressure;// 4 bytes - Bar
-    float    battery_voltage; // 4 bytes - V
-    
-    // CAN Data - Wheel Speeds
-    uint16_t wheel_speed_fr;// 2 bytes - km/h
-    uint16_t wheel_speed_fl;// 2 bytes - km/h
-    uint16_t wheel_speed_rr;// 2 bytes - km/h
-    uint16_t wheel_speed_rl;// 2 bytes - km/h
-    
-    // CAN Data - Dynamics
-    float    g_force_lateral;// 4 bytes
-    float    heading;       // 4 bytes
-    
-    // Packet Metadata
-    uint16_t tx_count;      // 2 bytes - LoRa TX count
-    uint16_t can_frame_count;// 2 bytes - CAN frames received
-} combined_telemetry_packet_t;
+// Settings: what goes in the screen frames and the radio packet, and how often.
+// "live" is what's running. "pending" is the copy being edited over USB until it's saved.
+// The factory settings behave exactly like the fixed v1 firmware (see daq_settings_fs27.c).
+static daq_settings_t live_settings;
+static daq_settings_t pending_settings;
+static daq_proto_t settings_proto;
+
+void gps_set_rate_hz(int hz);
+
+// Everything the DAQ knows right now, for the frame and packet builders
+static void gather_inputs(daq_inputs_t* in) {
+    gps_data_t gps;
+    gps_get_data_safe(&gps);
+    can_get_sensor_data_safe(&in->can);
+    in->latitude = gps.raw_latitude;
+    in->longitude = gps.raw_longitude;
+    in->speed_kph = gps.speed_kph;
+    in->altitude = gps.altitude;
+    in->satellites = gps.satellites;
+    in->fix_valid = gps.fix_valid;
+    in->tx_count = lora_get_tx_count();
+    in->can_frame_count = can_get_frame_count();
+}
+
+// Core 1 takes its own copy. Interrupts are off for the copy so a settings save
+// (which pauses this core through an interrupt) can't land halfway through it.
+static void copy_live_settings(daq_settings_t* out) {
+    uint32_t irq = save_and_disable_interrupts();
+    memcpy(out, &live_settings, sizeof(*out));
+    restore_interrupts(irq);
+}
 
 // Core 1 entry point - LoRa broadcast with GPS + CAN telemetry
 void core1_main() {
+    flash_safe_execute_core_init();  // lets core 0 pause this core while it saves settings to flash
+
     safe_printf("Core 1: Initializing LoRa TX...\n");
     lora_tx_init();
     
@@ -69,67 +69,85 @@ void core1_main() {
     
     safe_printf("Core 1: Starting combined telemetry broadcast (GPS + CAN + LoRa)...\n");
     
+    static daq_settings_t settings;
+    static uint8_t packet[DAQ_MAX_PACKET_BYTES];
+
     while (true) {        
-        // Get thread-safe copy of GPS data
-        gps_data_t gps;
-        gps_get_data_safe(&gps);
+        copy_live_settings(&settings);
+
+        // Thread-safe copies of the GPS and CAN data
+        daq_inputs_t in;
+        gather_inputs(&in);
         
-        // Get thread-safe copy of CAN sensor data
-        ft550_sensor_data_t can_data;
-        can_get_sensor_data_safe(&can_data);
-        
-        // Build combined telemetry packet
-        combined_telemetry_packet_t packet;
-        packet.magic = 0x46533236;  // "FS26" magic number
-        
-        // GPS Data
-        packet.latitude = gps.raw_latitude;
-        packet.longitude = gps.raw_longitude;
-        packet.gps_speed_kph = gps.speed_kph;
-        packet.altitude = gps.altitude;
-        packet.satellites = (uint8_t)gps.satellites;
-        packet.fix_valid = gps.fix_valid ? 1 : 0;
-        
-        // CAN Data - Engine Parameters
-        packet.rpm = can_data.rpm;
-        packet.engine_temp = can_data.engine_temp;
-        packet.tps = can_data.tps;
-        
-        // CAN Data - Pressures & Fluids
-        packet.oil_pressure = can_data.oil_pressure;
-        packet.fuel_pressure = can_data.fuel_pressure;
-        packet.brake_pressure = can_data.brake_pressure;
-        packet.battery_voltage = can_data.battery_voltage;
-        
-        // CAN Data - Wheel Speeds
-        packet.wheel_speed_fr = can_data.wheel_speed_fr;
-        packet.wheel_speed_fl = can_data.wheel_speed_fl;
-        packet.wheel_speed_rr = can_data.wheel_speed_rr;
-        packet.wheel_speed_rl = can_data.wheel_speed_rl;
-        
-        // CAN Data - Dynamics
-        packet.g_force_lateral = can_data.g_force_lateral;
-        packet.heading = can_data.heading;
-        
-        // Packet Metadata
-        packet.tx_count = (uint16_t)lora_get_tx_count();
-        packet.can_frame_count = (uint16_t)(can_get_frame_count() & 0xFFFF);
+        // Build the telemetry packet from the settings (factory = the 68-byte "FS26" packet)
+        int length = daq_build_radio_packet(&settings, &in, packet, sizeof(packet));
         
         // Send it (blocking)
-        if (lora_send((uint8_t*)&packet, sizeof(packet))) {
+        if (length > 0 && lora_send(packet, (uint8_t)length)) {
             safe_printf("[TX] RPM:%u | Batt:%.2f | TPS:%.3f | EngineTemp:%.1f | TX#%u CAN#%u\n",
-                   packet.rpm, packet.battery_voltage, packet.tps, packet.engine_temp,
-                   packet.tx_count, packet.can_frame_count);
+                   in.can.rpm, in.can.battery_voltage, in.can.tps, in.can.engine_temp,
+                   (uint16_t)in.tx_count, (uint16_t)(in.can_frame_count & 0xFFFF));
             safe_printf("[ECU] MAP:%.3f bar | AirTemp:%.1f | Oil:%.2f bar | Fuel:%.2f bar | Water:%.2f bar | Lambda:%.3f\n",
-                   can_data.map, can_data.air_temp, can_data.oil_pressure, can_data.fuel_pressure,
-                   can_data.water_pressure, can_data.exhaust_o2);
+                   in.can.map, in.can.air_temp, in.can.oil_pressure, in.can.fuel_pressure,
+                   in.can.water_pressure, in.can.exhaust_o2);
             safe_printf("[GPS] Sats:%d | Fix:%d | Speed:%.1f kph\n",
-                   gps.satellites, gps.fix_valid ? 1 : 0, gps.speed_kph);
+                   in.satellites, in.fix_valid ? 1 : 0, in.speed_kph);
         } else {
             safe_printf("[TX] FAILED #%lu\n", lora_get_tx_count());
         }
         
-        sleep_ms(500);  // TX rate: 2Hz
+        sleep_ms(daq_radio_sleep_ms(&settings));  // TX rate: 2Hz with factory settings
+    }
+}
+
+// ---- Settings over USB serial ($GM,... lines, see wiki/DAQ-Settings-Protocol.md) ----
+
+static void settings_reply(const char* line) {
+    safe_printf("%s\n", line);
+}
+
+static bool settings_commit(const daq_settings_t* sealed) {
+    uint8_t old_gps_hz = live_settings.gps_hz;
+    if (!daq_flash_save(sealed, &live_settings)) return false;
+    if (live_settings.gps_hz != old_gps_hz) gps_set_rate_hz(live_settings.gps_hz);
+    return true;
+}
+
+static void settings_start(void) {
+    bool loaded = daq_flash_load(&live_settings);
+    if (!loaded) daq_settings_factory(&live_settings);
+    pending_settings = live_settings;
+    settings_proto.live = &live_settings;
+    settings_proto.pending = &pending_settings;
+    settings_proto.reply = settings_reply;
+    settings_proto.commit = settings_commit;
+    settings_proto.loaded_from_flash = loaded;
+    safe_printf("Settings: %s, version %lu, radio %u Hz, screen %u Hz, GPS %u Hz, packet %d bytes\n",
+           loaded ? "loaded from flash" : "factory", (unsigned long)live_settings.counter,
+           live_settings.radio_hz, live_settings.screen_hz, live_settings.gps_hz,
+           daq_radio_packet_size(&live_settings));
+}
+
+// Reads whatever has arrived over USB without waiting, and answers complete $GM lines
+static void settings_poll(void) {
+    static char line[300];
+    static int len = 0;
+    for (int i = 0; i < 64; i++) {
+        int c = getchar_timeout_us(0);
+        if (c < 0) break;
+        if (c == '\n' || c == '\r') {
+            if (len > 0) {
+                line[len] = '\0';
+                daq_inputs_t in;
+                gather_inputs(&in);
+                daq_proto_handle(&settings_proto, &in, line);
+                len = 0;
+            }
+        } else if (len < (int)sizeof(line) - 1) {
+            line[len++] = (char)c;
+        } else {
+            len = 0;
+        }
     }
 }
 
@@ -140,8 +158,14 @@ int main() {
     
     safe_printf("Core 0: Initializing dual-core GPS + LoRa DAQ system...\n");
     
+    // Load the saved settings (or the factory ones) before anything uses them
+    settings_start();
+
     // Initialize GPS module on core 0
     gps_init();
+    if (live_settings.gps_hz != 5) {
+        gps_set_rate_hz(live_settings.gps_hz);
+    }
     // Initialize CAN bus for ECU data
     can_init();
     
@@ -168,61 +192,23 @@ int main() {
         while (can_process_frame()) {
         }
         
-        // 3. DASHBOARD BROADCAST (10Hz) - Send the latest GPS + CAN telemetry to the dash via CAN. 
+        // 3. Settings requests from Gryphon Manager over USB
+        settings_poll();
+
+        // 4. DASHBOARD BROADCAST (20Hz with factory settings) - send the frames in the settings to the dash via CAN.
+        //    Factory settings: 0x600 engine, 0x601 battery + air temp, 0x602 GPS position, 0x603 speed + counters.
         uint32_t current_time = to_ms_since_boot(get_absolute_time());
-        if (current_time - last_dash_tx >= 50) { 
-            
-            // Get thread-safe copies of the latest telemetry
-            ft550_sensor_data_t can_data;
-            can_get_sensor_data_safe(&can_data);
-            
-            gps_data_t gps;
-            gps_get_data_safe(&gps);
+        if (current_time - last_dash_tx >= daq_screen_period_ms(&live_settings)) { 
+            daq_inputs_t in;
+            gather_inputs(&in);
 
-            // --- FRAME 0x600 (Primary Engine) ---
-            uint8_t dash_tx_buf[8];
-            uint16_t rpm_out = can_data.rpm;
-            // FT550 gives MAP in bar, the screen DBC expects kPa x10 (1 bar = 100 kPa)
-            uint16_t map_out = (uint16_t)(can_data.map * 100.0f * 10.0f);
-            int16_t  et_out  = (int16_t)(can_data.engine_temp * 10.0f);
-            uint16_t tps_out = (uint16_t)(can_data.tps * 10.0f);
-            
-            dash_tx_buf[0] = rpm_out & 0xFF; dash_tx_buf[1] = (rpm_out >> 8);
-            dash_tx_buf[2] = map_out & 0xFF; dash_tx_buf[3] = (map_out >> 8);
-            dash_tx_buf[4] = et_out & 0xFF;  dash_tx_buf[5] = (et_out >> 8);
-            dash_tx_buf[6] = tps_out & 0xFF; dash_tx_buf[7] = (tps_out >> 8);
-            MCP2515_Send(0x600, dash_tx_buf, 8);
-
-            // --- FRAME 0x601 (Battery & Air Temp) ---
-            uint8_t aux_tx_buf[8] = {0};
-            uint16_t batt_out = (uint16_t)(can_data.battery_voltage * 100.0f);
-            int16_t  at_out   = (int16_t)(can_data.air_temp * 10.0f);
-            
-            aux_tx_buf[0] = batt_out & 0xFF; aux_tx_buf[1] = (batt_out >> 8);
-            aux_tx_buf[2] = at_out & 0xFF;   aux_tx_buf[3] = (at_out >> 8);
-            MCP2515_Send(0x601, aux_tx_buf, 8);
-
-            // --- FRAME 0x602 (GPS Pos) ---
-            uint8_t gps_tx_buf[8];
-            int32_t lat_out = (int32_t)(gps.raw_latitude * 10000000.0f);
-            int32_t lon_out = (int32_t)(gps.raw_longitude * 10000000.0f);
-            
-            gps_tx_buf[0] = lat_out & 0xFF;         gps_tx_buf[1] = (lat_out >> 8) & 0xFF;
-            gps_tx_buf[2] = (lat_out >> 16) & 0xFF; gps_tx_buf[3] = (lat_out >> 24) & 0xFF;
-            gps_tx_buf[4] = lon_out & 0xFF;         gps_tx_buf[5] = (lon_out >> 8) & 0xFF;
-            gps_tx_buf[6] = (lon_out >> 16) & 0xFF; gps_tx_buf[7] = (lon_out >> 24) & 0xFF;
-            MCP2515_Send(0x602, gps_tx_buf, 8);
-
-            // --- FRAME 0x603 (Meta) ---
-            uint8_t meta_tx_buf[8] = {0};
-            uint16_t speed_out = (uint16_t)(gps.speed_kph * 10.0f);
-            
-            meta_tx_buf[0] = speed_out & 0xFF; meta_tx_buf[1] = (speed_out >> 8);
-            meta_tx_buf[2] = gps.satellites;
-            meta_tx_buf[3] = gps.fix_valid ? 1 : 0;
-            meta_tx_buf[4] = lora_get_tx_count() & 0xFF; meta_tx_buf[5] = (lora_get_tx_count() >> 8);
-            meta_tx_buf[6] = can_get_frame_count() & 0xFF; meta_tx_buf[7] = (can_get_frame_count() >> 8);
-            MCP2515_Send(0x603, meta_tx_buf, 8);
+            for (int i = 0; i < DAQ_MAX_SCREEN_FRAMES; i++) {
+                uint32_t frame_id;
+                uint8_t dash_tx_buf[8];
+                if (daq_build_screen_frame(&live_settings, i, &in, &frame_id, dash_tx_buf)) {
+                    MCP2515_Send(frame_id, dash_tx_buf, 8);
+                }
+            }
 
             last_dash_tx = current_time;
         }

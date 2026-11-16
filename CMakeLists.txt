@@ -59,10 +59,12 @@ add_executable(FS27-DAQ
     lr1121_tx.c
     can_handler_fs27.c
     ft550_decoder.c
+    daq_settings_fs27.c
+    daq_flash_fs27.c
 )
 
 pico_set_program_name(FS27-DAQ "FS27-DAQ")
-pico_set_program_version(FS27-DAQ "0.1")
+pico_set_program_version(FS27-DAQ "2.0")
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(FS27-DAQ 0)
@@ -72,6 +74,8 @@ pico_enable_stdio_usb(FS27-DAQ 1)
 target_link_libraries(FS27-DAQ
         pico_stdlib
         pico_multicore
+        pico_flash
+        hardware_flash
         gpio
         spi
         lr1121

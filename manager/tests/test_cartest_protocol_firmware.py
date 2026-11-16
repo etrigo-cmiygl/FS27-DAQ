@@ -129,6 +129,13 @@ def test_firmware_helpers(tmp_path):
          "assets": [{"name": "FS27-DAQ.uf2", "browser_download_url": "dl", "size": 1536}]},
     ]
     assert fw.latest_firmware(releases)["tag"] == "fw-v3"
+    both = [{"tag_name": "manager-v2.0.0", "published_at": "2027-01-05T10:00:00Z", "assets": [
+        {"name": "FS27-DAQ-v1-fallback.uf2", "browser_download_url": "v1"},
+        {"name": "GryphonManager-windows.zip", "browser_download_url": "zip"},
+        {"name": "FS27-DAQ.uf2", "browser_download_url": "v2"}]}]
+    picked = fw.latest_firmware(both)
+    assert picked["name"] == "FS27-DAQ.uf2" and picked["url"] == "v2"
+    assert picked["others"] == [{"name": "FS27-DAQ-v1-fallback.uf2", "url": "v1"}]
     assert fw.latest_firmware(releases[:2]) is None
     assert fw.newer_manager(releases, "1.0.0")["version"] == "1.2.0"
     assert fw.newer_manager(releases, "1.2.0") is None

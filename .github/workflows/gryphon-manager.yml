@@ -2,11 +2,17 @@ name: Gryphon Manager
 
 on:
   push:
-    branches: [gryphon-manager]
+    branches: [gryphon-manager, v2-wip]
     tags: ["manager-v*"]
     paths:
       - "manager/**"
       - "*.dbc"
+      - "*.c"
+      - "*.h"
+      - "CMakeLists.txt"
+      - "src/**"
+      - "tests/**"
+      - "receiver/**"
       - ".github/workflows/gryphon-manager.yml"
   workflow_dispatch:
     inputs:
@@ -41,7 +47,46 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: python -m pytest
 
+  firmware:
+    runs-on: ubuntu-latest
+    env:
+      PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Desk tests (run on the build machine, no Pico needed)
+        run: |
+          cd tests
+          cc -Wall -Wextra -Werror -I.. -o ft550_test ft550_decoder_test_fs27.c ../ft550_decoder.c -lm
+          ./ft550_test | tail -1
+          cc -Wall -Wextra -Werror -fsanitize=address,undefined -I.. -o daq_settings_test daq_settings_test_fs27.c ../daq_settings_fs27.c ../ft550_decoder.c -lm
+          ./daq_settings_test
+      - name: Install the ARM compiler and the Pico SDK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib cmake ninja-build
+          git clone --depth 1 --branch 2.2.0 https://github.com/raspberrypi/pico-sdk "$PICO_SDK_PATH"
+          git -C "$PICO_SDK_PATH" submodule update --init --depth 1 lib/tinyusb lib/mbedtls
+      - name: Build the DAQ firmware (v2, with settings)
+        run: |
+          cmake -S . -B build -G Ninja -DPICO_BOARD=pico2
+          ninja -C build
+          mkdir -p out
+          cp build/FS27-DAQ.uf2 out/FS27-DAQ.uf2
+      - name: Build the v1 firmware from changesfs27 (fixed settings, kept as a fallback)
+        run: |
+          git fetch --depth 1 origin changesfs27
+          git worktree add ../v1 FETCH_HEAD
+          cmake -S ../v1 -B build-v1 -G Ninja -DPICO_BOARD=pico2
+          ninja -C build-v1
+          cp build-v1/FS27-DAQ.uf2 out/FS27-DAQ-v1-fallback.uf2
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DAQ-firmware
+          path: out/*.uf2
+
   build-windows:
+    needs: firmware
     runs-on: windows-latest
     defaults:
       run:
@@ -86,18 +131,28 @@ jobs:
             manager/selftest.png
             manager/selftest.log
           if-no-files-found: ignore
+      - uses: actions/download-artifact@v4
+        with:
+          name: DAQ-firmware
+          path: manager/firmware-out
       - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/manager-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: manager/GryphonManager-windows.zip
+          files: |
+            manager/GryphonManager-windows.zip
+            manager/firmware-out/FS27-DAQ.uf2
+            manager/firmware-out/FS27-DAQ-v1-fallback.uf2
           name: Gryphon Manager ${{ github.ref_name }}
           generate_release_notes: true
       - name: Release dry run (draft release, manual trigger only)
         if: github.event_name == 'workflow_dispatch' && inputs.release_dry_run
         uses: softprops/action-gh-release@v2
         with:
-          files: manager/GryphonManager-windows.zip
+          files: |
+            manager/GryphonManager-windows.zip
+            manager/firmware-out/FS27-DAQ.uf2
+            manager/firmware-out/FS27-DAQ-v1-fallback.uf2
           tag_name: manager-dry-run
           target_commitish: ${{ github.sha }}
           name: Gryphon Manager dry run (delete me)

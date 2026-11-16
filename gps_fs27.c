@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "gps.h"
+#include "daq_settings_fs27.h"
 #include "safe_print.h"
 
 static char nmea_buffer[NMEA_BUFFER_SIZE];
@@ -320,4 +321,15 @@ void gps_get_data_safe(gps_data_t* out) {
     uint32_t irq_state = spin_lock_blocking(gps_spin_lock);
     *out = gps_data;  // Copy entire struct atomically
     spin_unlock(gps_spin_lock, irq_state);
+}
+
+// Change the GPS update rate (1, 5 or 10 Hz) after gps_init(). Used by the DAQ settings.
+void gps_set_rate_hz(int hz) {
+    char command[32];
+    daq_gps_rate_command(hz, command, sizeof(command));
+    for (int i = 0; i < 3; i++) {
+        uart_puts(GPS_UART_ID, command);
+        sleep_ms(50);
+    }
+    safe_printf(">> GPS rate set to %d Hz\n", hz);
 }
