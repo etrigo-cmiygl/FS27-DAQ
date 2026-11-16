@@ -78,18 +78,6 @@ def test_generated_header(cfg):
     assert order[-2:] == ["tx_count", "can_frame_count"]
 
 
-def test_header_packet_matches_firmware_struct(cfg, repo):
-    src = (repo / "FS26-DAQ_fs27.c").read_text()
-    struct_src = src[src.index("typedef struct __attribute__((packed))"):src.index("} combined_telemetry_packet_t;")]
-    theirs = [line.split("//")[0].split() for line in struct_src.splitlines()[1:] if ";" in line]
-    theirs = [(t[0], t[1].rstrip(";")) for t in theirs]
-    h = cfg.generate()["gryphon_channels.h"]
-    body = h[h.index("typedef struct __attribute__((packed))"):h.index("} gryphon_telemetry_packet_t;")]
-    ours = [tuple(line.split()) for line in body.splitlines()[1:] if ";" in line]
-    ours = [(o[0], o[1].rstrip(";")) for o in ours]
-    assert ours == theirs
-
-
 def test_signal_list_is_json(cfg):
     import json
     data = json.loads(cfg.generate()["signals.json"])

@@ -506,7 +506,10 @@ bool daq_proto_handle(daq_proto_t* p, const daq_inputs_t* in, const char* line) 
             next.counter = p->live->counter + 1;
             daq_settings_seal(&next);
             if (!p->commit(&next)) err = "flash";
-            else *p->pending = *p->live;
+            else {
+                *p->pending = *p->live;
+                p->loaded_from_flash = true;
+            }
         }
     }
     if (err) {

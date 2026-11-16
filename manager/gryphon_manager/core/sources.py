@@ -230,6 +230,17 @@ class SimSource(Source):
                           receiver_format=receiver_format)
         self.parts = parts
         self.can_expected = parts in ("all", "can")
+        from .daq_sim import DaqSim
+        self.daq = DaqSim()
+        self._tx: queue.Queue = queue.Queue()
+
+    def write_line(self, text: str) -> None:
+        self._tx.put(text)
+
+    def _answer_daq(self, ts: float) -> None:
+        while not self._tx.empty():
+            for reply in self.daq.handle(self._tx.get(), self.car.rpm, self.car.speed):
+                self.emit("daqline", (ts, reply))
 
     def set_mode(self, mode: str) -> None:
         self.car.mode = mode
@@ -260,6 +271,7 @@ class SimSource(Source):
                 if self.wanted(kind):
                     self.emit(kind, payload)
             t_prev = t
+            self._answer_daq(base + t)
             if self.can_expected and t - last_status > 0.5:
                 last_status = t
                 state = "Error passive" if self.car.fault == "bus_errors" else "OK (listen-only)"

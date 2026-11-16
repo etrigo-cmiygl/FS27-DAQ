@@ -36,7 +36,7 @@ $GM,<COMMAND>[,arguments...]*CS
 
 | From the DAQ | Meaning |
 | --- | --- |
-| `$GM,HELLO,fw=FS27-DAQ-2.0,proto=2,settings=<n>,saved=<0 or 1>*CS` | `n` goes up by one on every save. `saved=0` means it's running factory settings |
+| `$GM,HELLO,fw=FS27-DAQ-2.0,proto=2,settings=<n>,saved=<0 or 1>*CS` | `n` goes up by one on every save. `saved=0` means nothing has been saved to flash yet, so it's running factory settings |
 | `$GM,VAL,gps_hz=5,radio_hz=2,screen_hz=20,layout=1,frames=4,fields=21,packet=68,unsaved=0*CS` | Reply to GET (shows the pending copy) |
 | `$GM,OK,settings=<n>*CS` | Done |
 | `$GM,ERR,<reason>*CS` | `checksum`, `format`, `range`, `unknown`, `moving`, `flash` |

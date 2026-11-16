@@ -86,7 +86,7 @@ Built: all fourteen views, the five sources, the simulator with eight fault scen
 
 Left for later:
 
-- DAQ settings needs firmware support. The page and the [protocol](DAQ-Settings-Protocol.md) are ready.
+- DAQ settings and Send to DAQ need the v2 DAQ firmware (see the [protocol](DAQ-Settings-Protocol.md)). The v2 firmware is desk-tested and builds in CI but hasn't been run on the car yet.
 - Rocky still prints the text box. The app reads it, and reads the [PKT format](Receiver-PKT-Format.md) as soon as Rocky sends it.
 - PDM and lambda decoding needs their IDs and layouts.
 - Mac build, and PCAN on a Mac.

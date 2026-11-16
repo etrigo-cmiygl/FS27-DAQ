@@ -218,3 +218,59 @@ def test_screen_frames_and_radio_packet_are_editable(win):
     assert "GRYPHON_PRESS" in files["gryphon_screen.dbc"] and "Oil_Pressure" in files["gryphon_screen.dbc"]
     assert "uint16_t water_pressure;" in files["gryphon_channels.h"]
     assert "GRYPHON_PACKET_SIZE 70" in files["gryphon_channels.h"]
+
+
+def wait_daq(win, seconds=6.0):
+    end = time.time() + seconds
+    pump(win, 0.2)
+    while win.hub.daq.busy and time.time() < end:
+        pump(win, 0.05)
+    pump(win, 0.2)
+    assert not win.hub.daq.busy
+
+
+def test_daq_settings_page_and_send_to_daq_with_the_simulator(win):
+    notices = []
+    win.hub.notice.connect(lambda level, text: notices.append((level, text)))
+    win.show_view("daq")
+    view = win.views["daq"]
+    assert not view.apply_btn.isEnabled()
+    view._check()
+    assert notices and "Plug the DAQ in" in notices[-1][1]
+    win.hub.connect_source("sim", parts="all", mode="off", fault="none", warmup=5.0)
+    pump(win, 1.0)
+    assert win.hub.daq_can_talk()
+    view._check()
+    wait_daq(win)
+    assert view.apply_btn.isEnabled() and "68 bytes" in view.summary.text() and "0x603" in view.summary.text()
+    assert view.controls["radio_hz"].value() == 2
+    view.controls["radio_hz"].setValue(6)
+    view.controls["gps_hz"].setCurrentIndex(2)
+    view._apply()
+    wait_daq(win)
+    sim = win.hub.source.daq
+    assert sim.live["radio_hz"] == 6 and sim.live["gps_hz"] == 10 and sim.saved
+    assert notices[-1][0] == "info" and "read back the same" in notices[-1][1]
+
+    win.show_view("channels")
+    ch = win.views["channels"]
+    ch.cfg.data["radio_packet"]["fields"].append({"name": "lambda", "channel": "lambda", "type": "f32"})
+    ch.cfg.data["radio_packet"]["layout_version"] = 3
+    ch._send_to_daq(confirm=False)
+    wait_daq(win)
+    assert sim.live["n_radio"] == 22 and sim.live["layout"] == 3 and sim.live["radio_hz"] == 6
+    assert notices[-1][0] == "info" and "took the layout" in notices[-1][1]
+
+    win.hub.source.set_mode("idle")
+    pump(win, 1.5)
+    view._factory(confirm=False)
+    pump(win, 0.3)
+    assert sim.live["n_radio"] == 22 and "isn't moving" in notices[-1][1]
+    win.hub.source.set_mode("off")
+    pump(win, 1.5)
+    view._factory(confirm=False)
+    wait_daq(win)
+    assert sim.live["n_radio"] == 21 and sim.live["radio_hz"] == 2 and view.controls["radio_hz"].value() == 2
+    win.hub.disconnect_source()
+    pump(win, 0.3)
+    assert not view.apply_btn.isEnabled()

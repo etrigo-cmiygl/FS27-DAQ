@@ -4,6 +4,7 @@ import queue
 import time
 from collections import deque
 
+from ..core.daq_client import DaqClient
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..core.config import MasterConfig
@@ -28,6 +29,7 @@ class Hub(QObject):
     config_changed = Signal()
     replay_finished = Signal()
     navigate = Signal(str)
+    daq_done = Signal(object)
 
     def __init__(self, settings: Settings | None = None, config_path=None):
         super().__init__()
@@ -54,6 +56,7 @@ class Hub(QObject):
         self.trace_enabled = False
         self.trace_serial = 0
         self.daq_log: deque = deque(maxlen=400)
+        self.daq = DaqClient()
         self.ticks = 0
         self.timer = QTimer(self)
         self.timer.setInterval(50)
@@ -96,6 +99,18 @@ class Hub(QObject):
     @property
     def connected(self) -> bool:
         return self.state == "connected"
+
+    def daq_can_talk(self) -> bool:
+        """True when the connected source is a DAQ on USB (or the simulator pretending to be one)."""
+        if self.state != "connected" or self.source is None or not hasattr(self.source, "write_line"):
+            return False
+        if self.kind == "sim":
+            return self.source.parts in ("all", "daq")
+        return self.kind == "daq"
+
+    @staticmethod
+    def _no_daq(_line: str) -> None:
+        raise OSError("the DAQ isn't connected any more")
 
     def _make_source(self, kind: str, opts: dict):
         s = self.settings
@@ -243,6 +258,7 @@ class Hub(QObject):
                     rec.on_item(kind, payload)
                 if kind == "daqline":
                     self.daq_log.append(payload[1])
+                    self.daq.feed(payload[1])
             elif kind == "status":
                 pipe.feed(kind, payload)
             elif kind == "opened":
@@ -274,6 +290,10 @@ class Hub(QObject):
                 self.replay_finished.emit()
         if self.state == "reconnecting" and self.source is None and self._retry_at and time.time() >= self._retry_at:
             self._retry()
+        if self.daq.busy or self.daq.result is not None:
+            done = self.daq.poll(time.time(), self.source.write_line if self.daq_can_talk() else self._no_daq)
+            if done is not None:
+                self.daq_done.emit(done)
         self.engine.tick(self.now())
         new = self.engine.alarms.take_new()
         for ev in new:

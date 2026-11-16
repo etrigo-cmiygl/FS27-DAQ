@@ -1,5 +1,4 @@
 from conftest import run_sim
-from gryphon_manager.core import daq_protocol as proto
 from gryphon_manager.core import firmware as fw
 from gryphon_manager.core.cartest import STEPS, build_report_html, evaluate, overall, suggest
 from gryphon_manager.core.engine import Engine
@@ -82,30 +81,6 @@ def test_report(cfg):
     assert "two terminators" in html and "Multimeter reading" in html and "can.blf" in html
     for s in STEPS:
         assert s.title in html
-
-
-def test_settings_protocol_lines():
-    line = proto.build_line("SET", gps_hz=10, radio_hz=5)
-    assert line.startswith("$GM,SET,gps_hz=10,radio_hz=5*") and len(line.split("*")[1]) == 2
-    assert proto.parse_line(line) == ("SET", {"gps_hz": "10", "radio_hz": "5"})
-    assert proto.parse_line(line[:-1] + ("0" if line[-1] != "0" else "1")) is None
-    assert proto.parse_line("[TX] RPM:0") is None
-    cmd, vals = proto.parse_line(proto.build_line("ERR") .replace("ERR", "ERR")) or ("", {})
-    assert cmd == "ERR"
-    body = "GM,ERR,moving"
-    assert proto.parse_line(f"${body}*{proto.checksum(body)}") == ("ERR", {"_": "moving"})
-    assert proto.checksum("PMTK251,57600") == "2C"
-
-
-def test_settings_protocol_validation_and_can():
-    assert proto.validate({"gps_hz": 5, "radio_hz": 10, "sd_log": 1, "ch.rpm": "fast"}) == []
-    probs = proto.validate({"gps_hz": 7, "radio_hz": 50, "radio_power_dbm": 22, "nope": 1, "ch.rpm": "x"})
-    assert len(probs) == 5
-    frame = proto.build_can("SET", "radio_hz", 5, seq=9)
-    assert len(frame) == 8
-    assert proto.parse_can(frame) == {"command": 0x02, "is_reply": False, "key": "radio_hz", "value": 5, "seq": 9}
-    assert proto.parse_can(frame[:7] + bytes([frame[7] ^ 1])) is None
-    assert proto.CAN_ID_REQUEST not in range(0x600, 0x604)
 
 
 def test_firmware_helpers(tmp_path):

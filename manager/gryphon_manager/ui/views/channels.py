@@ -407,8 +407,11 @@ class ChannelsView(View):
         self.btn_save = button("Save", self._save, tip="Save the master config file")
         self.btn_gen = button("Generate files...", self._generate, "primary",
                               "Write the team DBC, screen DBC, firmware header and signal list. Shows a diff first.")
+        self.btn_send = button("Send to DAQ", self._send_to_daq,
+                               tip="Load the screen frames and radio packet into the DAQ over USB. No reflashing.")
         self.root.addLayout(hbox(self.status, None, self.btn_save,
-                                 button("Undo all changes", self._revert), self.btn_gen))
+                                 button("Undo all changes", self._revert), self.btn_gen, self.btn_send))
+        hub.daq_done.connect(self._daq_done)
         from PySide6.QtWidgets import QWidget
         self.tabs = QTabWidget()
         t1 = QWidget()
@@ -750,6 +753,46 @@ class ChannelsView(View):
             self.hub.notice.emit(
                 "info", f"Wrote {len(changes)} files to {out}. Copy gryphon_channels.h into the firmware and "
                         "load gryphon_screen.dbc into the Winstar builder if the screen frames changed.")
+
+    def _send_to_daq(self, confirm: bool = True):
+        from ...core import daq_protocol as proto
+        if not self.valid:
+            QMessageBox.information(self, "Send to DAQ", "Fix the problems listed under Checks first.")
+            return
+        if not self.hub.daq_can_talk():
+            QMessageBox.information(self, "Send to DAQ", "Plug the DAQ in over USB, choose 'DAQ over USB' in the "
+                                                         "top bar and Connect. Then press Send to DAQ again.")
+            return
+        if not self.hub.engine.car_stationary():
+            QMessageBox.information(self, "Send to DAQ", "The car is moving or the engine is running. The DAQ only "
+                                                         "takes new settings when it's stopped.")
+            return
+        layout, problems = proto.layout_from_config(self.cfg)
+        if problems:
+            QMessageBox.information(self, "Send to DAQ", "The DAQ can't do this layout yet:\n\n" + "\n".join(problems))
+            return
+        size = proto.packet_size(layout["radio"], False)
+        text = (f"This loads {len(layout['frames'])} screen frames and {len(layout['radio'])} radio fields into the "
+                f"DAQ and saves them (radio packet up to {size} bytes, layout version {layout['layout']}).\n\n"
+                "If the radio packet changed, the pit receiver and anything reading it need the same layout.\n\n"
+                "Send it?")
+        if confirm and QMessageBox.question(self, "Send to DAQ", text) != QMessageBox.Yes:
+            return
+        if self.dirty and not self._save():
+            return
+        self.btn_send.setEnabled(False)
+        self.hub.daq.send_layout(layout)
+
+    def _daq_done(self, result: dict):
+        if result["op"] != "layout":
+            return
+        self.btn_send.setEnabled(True)
+        if result["ok"]:
+            self.hub.notice.emit("info", "The DAQ took the layout, saved it and read it back the same. Settings "
+                                         f"version {(result['hello'] or {}).get('settings', '?')} -> "
+                                         f"{int((result['hello'] or {}).get('settings', 0)) + 1}.")
+        else:
+            self.hub.notice.emit("error", "Send to DAQ didn't work: " + result["error"])
 
     def on_config(self):
         if not self.dirty:
