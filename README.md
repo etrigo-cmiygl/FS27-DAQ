@@ -7,7 +7,7 @@ The DAQ:
 - reads engine data from the FuelTech FT550 Lite ECU over CAN (1 Mbps, FTCAN 2.0 simplified broadcast)
 - adds GPS position from a Quectel L76B
 - sends a compact set of CAN frames (0x600–0x603) for the steering wheel screen
-- broadcasts a 68-byte telemetry packet over LoRa (2.4 GHz) to the pit receiver, [Rocky](https://github.com/LouWasHere/FS26-RCV)
+- broadcasts a 68-byte telemetry packet over LoRa (2.4 GHz) to the pit receiver, [Rocky](https://github.com/LouWasHere/FS26-RCV) (FS27 version of its firmware: [`receiver/`](receiver/README.md))
 
 See the [wiki](wiki/Home.md) for architecture, hardware, telemetry flow and build notes.
 

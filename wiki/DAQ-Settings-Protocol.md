@@ -84,7 +84,6 @@ Each field is `source/type`. Types: 0 u8, 1 i8, 2 u16, 3 i16, 4 u32, 5 i32, 6 f3
 | 50, 51 | LoRa packets sent, ECU frames decoded |
 | 60-74 | Spare inputs 0-14, after their sensor scaling |
 
-Spare inputs (Pico ADC, ADS1115, frequency) aren't in the firmware yet. They'll get source numbers from 60.
 
 ## Spare inputs
 

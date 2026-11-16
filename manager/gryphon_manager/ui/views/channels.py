@@ -822,9 +822,10 @@ class ChannelsView(View):
             text += "The radio packet is the standard 68-byte one, so the pit receiver carries on working.\n\n"
         else:
             text += (f"The radio packet is NOT the standard one any more ({proto.packet_size(layout['radio'], False)} "
-                     f"bytes, layout version {layout['layout']}). The pit receiver's current firmware only "
-                     "understands the standard packet, so live telemetry in the pits will stop until the "
-                     "receiver is updated too. Screen frames and spare inputs don't have this problem.\n\n")
+                     f"bytes, layout version {layout['layout']}). Louis's FS26 receiver firmware only passes on the "
+                     "standard packet, so the pit receiver needs the FS27 receiver firmware (FS27-RCV.uf2) first, "
+                     "and every laptop in the pits needs this same channel list. Until then live telemetry in "
+                     "the pits will stop. Screen frames and spare inputs don't have this problem.\n\n")
         text += "Send it?"
         if confirm and QMessageBox.question(self, "Send to DAQ", text) != QMessageBox.Yes:
             return

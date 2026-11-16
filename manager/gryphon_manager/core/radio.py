@@ -26,7 +26,15 @@ def pack_packet(cfg: MasterConfig, values: dict) -> bytes:
     return cfg.radio_struct.pack(*args)
 
 
+CUSTOM_MAGIC = b"\x37\x32\x53\x46"   # "FS27": a layout other than the standard one, then a layout version byte
+
+
 def unpack_packet(cfg: MasterConfig, raw: bytes) -> dict | None:
+    if len(raw) == cfg.radio_size + 1 and raw[:4] == CUSTOM_MAGIC:
+        version = int((cfg.data.get("radio_packet") or {}).get("layout_version", 1)) & 0xFF
+        if raw[4] != version:
+            return None
+        raw = cfg.radio_struct.pack(cfg.radio_magic, *cfg.radio_struct.unpack(b"\0" * 4 + raw[5:])[1:])
     if len(raw) != cfg.radio_size:
         return None
     fields = cfg.radio_struct.unpack(raw)

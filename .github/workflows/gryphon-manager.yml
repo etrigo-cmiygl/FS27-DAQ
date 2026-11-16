@@ -72,6 +72,11 @@ jobs:
           ninja -C build
           mkdir -p out
           cp build/FS27-DAQ.uf2 out/FS27-DAQ.uf2
+      - name: Build the pit receiver firmware (Louis's FS26-RCV with PKT lines)
+        run: |
+          cmake -S receiver -B build-rcv -G Ninja -DPICO_BOARD=pico2
+          ninja -C build-rcv
+          cp build-rcv/FS27-RCV.uf2 out/FS27-RCV.uf2
       - name: Build the v1 firmware from changesfs27 (fixed settings, kept as a fallback)
         run: |
           git fetch --depth 1 origin changesfs27
@@ -143,6 +148,7 @@ jobs:
             manager/GryphonManager-windows.zip
             manager/firmware-out/FS27-DAQ.uf2
             manager/firmware-out/FS27-DAQ-v1-fallback.uf2
+            manager/firmware-out/FS27-RCV.uf2
           name: Gryphon Manager ${{ github.ref_name }}
           generate_release_notes: true
       - name: Release dry run (draft release, manual trigger only)
@@ -153,6 +159,7 @@ jobs:
             manager/GryphonManager-windows.zip
             manager/firmware-out/FS27-DAQ.uf2
             manager/firmware-out/FS27-DAQ-v1-fallback.uf2
+            manager/firmware-out/FS27-RCV.uf2
           tag_name: manager-dry-run
           target_commitish: ${{ github.sha }}
           name: Gryphon Manager dry run (delete me)

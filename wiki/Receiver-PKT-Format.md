@@ -26,19 +26,12 @@ PKT,-71,9,36325346...A0860100
 ## Rules
 
 - Send the packet untouched. The laptop decodes it, so a packet layout change never needs a receiver change.
-- Only print a `PKT` line for packets that pass the radio CRC. The laptop checks the length and the magic number (`0x46533236`, sent little-endian so the first bytes are `36 32 53 46`).
+- Only print a `PKT` line for packets that pass the radio CRC. The receiver drops anything that doesn't start with one of the two magic numbers. The laptop checks the length, the magic number (`0x46533236`, sent little-endian so the first bytes are `36 32 53 46`) and, for custom layouts, the layout version.
 - Other lines (`[LORA] ...`, `[STATS] ...`) can stay. Anything that doesn't start with `PKT,` is ignored, apart from `[STATS]`.
 
-## Firmware change
+## Firmware
 
-In `FS26-RCV.c`, replace the body of `display_telemetry()` with:
-
-```c
-printf("PKT,%d,%d,", rssi, snr);
-const uint8_t* b = (const uint8_t*)packet;
-for (size_t i = 0; i < sizeof(*packet); i++) printf("%02X", b[i]);
-printf("\n");
-```
+Done in `receiver/` in this repo: Louis's FS26-RCV with the text box swapped for the PKT line (`receiver/FS26-RCV_fs27.c`, line code in `receiver/rcv_pkt_fs27.h`). CI builds `FS27-RCV.uf2` and attaches it to releases. It forwards packets starting with either magic number, `FS26` (the standard 68-byte packet) or `FS27` (a custom layout: magic, one layout version byte, then the fields in the channel list's order). It hasn't been run on the real receiver yet.
 
 ## The packet
 

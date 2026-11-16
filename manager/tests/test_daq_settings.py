@@ -310,3 +310,50 @@ def test_client_notices_a_wrong_read_back():
     client.send_rates({"gps_hz": 5, "radio_hz": 9, "screen_hz": 20})
     r = run_client(client, Forgetful())
     assert not r["ok"] and r["code"] == "verify"
+
+
+def test_custom_radio_packet_goes_through_the_receiver_code_and_decodes(firmware, cfg, tmp_path):
+    from gryphon_manager.core.radio import ReceiverParser, format_pkt_line
+    cc = shutil.which("cc") or shutil.which("gcc")
+    exe = tmp_path / ("rcv_pkt_host.exe" if os.name == "nt" else "rcv_pkt_host")
+    subprocess.run([cc, "-I", str(REPO / "receiver"), "-o", str(exe), str(REPO / "tests" / "rcv_pkt_host_fs27.c")],
+                   check=True)
+
+    def receiver(packet_hex, rssi=-71, snr=9):
+        return subprocess.run([str(exe)], input=f"{rssi} {snr} {packet_hex}\n", capture_output=True, text=True,
+                              check=True).stdout.strip()
+
+    firmware.handle(proto.build_line("FACTORY"))
+    firmware.send("!rpm=0")
+    standard = firmware.send("!packet")[0]
+    line = receiver(standard)
+    assert line == format_pkt_line(bytes.fromhex(standard), -71, 9) and len(bytes.fromhex(standard)) == 68
+    assert ReceiverParser(cfg).feed(line, 1.0) is not None
+
+    c = cfg.copy()
+    c.channels.append(spare_channel("brake_front", "X0", sensor="linear", v_min=0.5, v_max=4.5, value_min=0,
+                                    value_max=100))
+    c.data["radio_packet"]["fields"].append({"name": "brake_front", "channel": "brake_front", "type": "f32"})
+    c.data["radio_packet"]["fields"].append({"name": "water_pressure", "channel": "water_pressure", "type": "u16"})
+    c.data["radio_packet"]["layout_version"] = 4
+    c.compile()
+    layout, problems = proto.layout_from_config(c)
+    assert problems == []
+    for cmd in proto.layout_commands(layout) + [proto.build_line("SAVE")]:
+        assert proto.parse_line(firmware.handle(cmd)[-1])[0] == "OK", cmd
+    for setup in ("!raw=3,2.5", "!rpm=4321"):
+        firmware.send(setup)
+    custom = firmware.send("!packet")[0]
+    assert custom.startswith("3732534604") and len(custom) == 2 * (5 + 64 + 4 + 2)
+    line = receiver(custom, -80, 7)
+    assert line.startswith("PKT,-80,7,3732534604")
+    got = ReceiverParser(c).feed(line, 2.0)
+    assert got is not None and got.values["rpm"] == 4321 and got.values["brake_front"] == 50.0
+    assert got.rssi == -80 and got.snr == 7
+    assert ReceiverParser(cfg).feed(line, 2.0) is None
+    c.data["radio_packet"]["layout_version"] = 5
+    c.compile()
+    assert ReceiverParser(c).feed(line, 2.0) is None
+    assert receiver("00112233" + custom[8:]) == "BAD" and receiver("36325346") == "BAD"
+    firmware.send("!rpm=0")
+    firmware.handle(proto.build_line("FACTORY"))
