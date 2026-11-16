@@ -30,7 +30,7 @@ NAV_TIPS = {
     "alarms": "Warnings when something goes out of range",
     "sessions": "Recordings: replay, compare, export",
     "channels": "The master list of sensors and what goes where",
-    "daq": "Change DAQ settings (needs newer DAQ firmware)",
+    "daq": "Change the DAQ's rates over USB, no reflashing",
     "firmware": "Put new firmware on the DAQ",
     "help": "Start here guide",
     "settings": "Adapter, units, device IDs, sounds",

@@ -20,11 +20,13 @@
 #define DAQ_FW_NAME              "FS27-DAQ-2.0"
 #define DAQ_PROTO_VERSION        2
 #define DAQ_SETTINGS_MAGIC       0x47533237u   /* "72SG" little-endian */
-#define DAQ_SETTINGS_VERSION     1
+#define DAQ_SETTINGS_VERSION     2
 #define DAQ_MAX_SCREEN_FRAMES    8
 #define DAQ_MAX_FRAME_SIGNALS    8
 #define DAQ_MAX_RADIO_FIELDS     48
 #define DAQ_MAX_PACKET_BYTES     200
+#define DAQ_SPARE_INPUTS         15    /* 0-2: A0-A2 (GP26-28), 3-10: X0-X7 (two ADS1115), 11-14: F0-F3 (GP16/17/18/20) */
+#define DAQ_SPARE_ANALOG         11    /* the first 11 read volts, the last 4 read Hz */
 #define DAQ_LEGACY_PACKET_MAGIC  0x46533236u   /* "FS26": the fixed v1 layout */
 #define DAQ_CUSTOM_PACKET_MAGIC  0x46533237u   /* "FS27": followed by a layout version byte */
 
@@ -43,7 +45,8 @@ typedef enum {
     DAQ_SRC_BATTERY = 37,
     DAQ_SRC_GPS_LAT = 40, DAQ_SRC_GPS_LON, DAQ_SRC_GPS_SPEED, DAQ_SRC_GPS_ALT, DAQ_SRC_GPS_SATS, DAQ_SRC_GPS_FIX,
     DAQ_SRC_TX_COUNT = 50, DAQ_SRC_CAN_COUNT = 51,
-    DAQ_SRC_LIMIT = 52
+    DAQ_SRC_SPARE_FIRST = 60, DAQ_SRC_SPARE_LAST = 74,   /* the spare inputs, after their sensor scaling */
+    DAQ_SRC_LIMIT = 75
 } daq_source_t;
 
 typedef enum { DAQ_T_U8 = 0, DAQ_T_I8, DAQ_T_U16, DAQ_T_I16, DAQ_T_U32, DAQ_T_I32, DAQ_T_F32, DAQ_T_LIMIT } daq_type_t;
@@ -69,6 +72,19 @@ typedef struct __attribute__((packed)) {
     uint8_t type;       /* daq_type_t */
 } daq_radio_field_t;
 
+/* What's plugged into a spare input. x is volts on an analogue input, Hz on a frequency input. */
+typedef enum {
+    DAQ_IN_OFF = 0,        /* nothing fitted, reads 0 */
+    DAQ_IN_LINEAR,         /* value = p0 * x + p1 (0-5 V sensors, wheel speed from Hz) */
+    DAQ_IN_THERMISTOR,     /* NTC to ground with a pull-up: p0 pull-up ohms, p1 ohms at 25 C, p2 beta, p3 supply volts */
+    DAQ_IN_LIMIT
+} daq_input_kind_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t kind;       /* daq_input_kind_t */
+    float   p[4];
+} daq_input_cfg_t;
+
 typedef struct __attribute__((packed)) {
     uint32_t magic;
     uint16_t version;
@@ -83,7 +99,10 @@ typedef struct __attribute__((packed)) {
     uint8_t  reserved[3];
     daq_screen_frame_t frames[DAQ_MAX_SCREEN_FRAMES];
     daq_radio_field_t  radio[DAQ_MAX_RADIO_FIELDS];
+    daq_input_cfg_t    inputs[DAQ_SPARE_INPUTS];
 } daq_settings_t;
+
+_Static_assert(sizeof(daq_settings_t) <= 4096, "settings must fit in one flash sector");
 
 /* Everything the DAQ knows right now, gathered by the main program. */
 typedef struct {
@@ -93,6 +112,8 @@ typedef struct {
     bool     fix_valid;
     uint32_t tx_count;
     uint32_t can_frame_count;
+    float    spare_raw[DAQ_SPARE_INPUTS];   /* volts or Hz, before the sensor scaling */
+    uint16_t spare_fitted;                  /* bit 0: ADS1115 at 0x48 answers, bit 1: the one at 0x49 */
 } daq_inputs_t;
 
 uint32_t daq_crc32(const uint8_t* data, size_t len);
@@ -107,6 +128,9 @@ int  daq_radio_packet_size(const daq_settings_t* s);
 bool daq_build_screen_frame(const daq_settings_t* s, int idx, const daq_inputs_t* in, uint32_t* id, uint8_t buf[8]);
 /* Fills buf with the radio packet. Returns its length, or 0 if it doesn't fit. */
 int  daq_build_radio_packet(const daq_settings_t* s, const daq_inputs_t* in, uint8_t* buf, int max);
+
+/* Volts or Hz in, sensor value out. A thermistor that's unplugged reads -50, shorted reads 250. */
+float daq_input_convert(const daq_input_cfg_t* c, float x);
 
 uint32_t daq_radio_sleep_ms(const daq_settings_t* s);
 uint32_t daq_screen_period_ms(const daq_settings_t* s);

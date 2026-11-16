@@ -108,6 +108,12 @@ class Hub(QObject):
             return self.source.parts in ("all", "daq")
         return self.kind == "daq"
 
+    def daq_free(self) -> bool:
+        """True when a new settings conversation can start. The background input read gives way to anything else."""
+        if self.daq.busy and self.daq.op == "inputs":
+            self.daq.cancel()
+        return not self.daq.busy
+
     @staticmethod
     def _no_daq(_line: str) -> None:
         raise OSError("the DAQ isn't connected any more")

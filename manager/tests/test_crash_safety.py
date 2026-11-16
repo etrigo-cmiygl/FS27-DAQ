@@ -50,7 +50,7 @@ def test_errors_are_logged_once_with_details(gryphon_home):
             h.flush()
         text = path.read_text(encoding="utf-8")
         assert len(got) == 2
-        assert "Gryphon Manager 1." in got[0] and "ValueError: oil sensor exploded" in got[0] and "boom" in got[0]
+        assert "Gryphon Manager 2." in got[0] and "ValueError: oil sensor exploded" in got[0] and "boom" in got[0]
         assert "thread reader" in got[1] and "ZeroDivisionError" in got[1]
         assert text.count("Unexpected error in main thread") == 1 and "has now happened 10 times" in text
         assert "Started Gryphon Manager" in text

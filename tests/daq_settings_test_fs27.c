@@ -7,6 +7,7 @@
  * The main job: prove the factory settings send exactly the same bytes as the fixed v1 firmware.
  * v1_radio_packet() and v1_screen_frames() below are copied from FS26-DAQ_fs27.c as it was at v1.
  */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -251,7 +252,7 @@ int main(void) {
     n_replies = 0;
     daq_proto_handle(&proto, &in, "$GM,HELLO*00");
     check("bad checksum", starts(replies[0], "$GM,ERR,checksum*"));
-    check("GET", starts(ask(&in, "GM,GET"), "$GM,VAL,gps_hz=5,radio_hz=2,screen_hz=20,layout=1,frames=4,fields=21,packet=68,unsaved=0*"));
+    check("GET", starts(ask(&in, "GM,GET"), "$GM,VAL,gps_hz=5,radio_hz=2,screen_hz=20,layout=1,frames=4,fields=21,packet=68,unsaved=0,inputs=0*"));
     check("unknown command", starts(ask(&in, "GM,DANCE"), "$GM,ERR,unknown*"));
     check("SET ok", starts(ask(&in, "GM,SET,radio_hz=5,gps_hz=10"), "$GM,OK,settings=0*"));
     check("SET is pending, not live", pending.radio_hz == 5 && live.radio_hz == 2 && commits == 0);
@@ -316,6 +317,60 @@ int main(void) {
     daq_settings_seal(&f2);
     check("FACTORY restores v1 behaviour exactly", memcmp(&live, &f2, sizeof(live)) == 0 && daq_radio_is_factory(&live) &&
           daq_radio_sleep_ms(&live) == 500);
+
+    /* spare inputs: scaling, the IN command, and using an input in a frame and the radio packet */
+    {
+        daq_inputs_t sp;
+        memset(&sp, 0, sizeof(sp));
+        daq_input_cfg_t lin = {DAQ_IN_LINEAR, {25.0f, -12.5f, 0, 0}};
+        daq_input_cfg_t ntc = {DAQ_IN_THERMISTOR, {10000.0f, 10000.0f, 3950.0f, 3.3f}};
+        daq_input_cfg_t off = {DAQ_IN_OFF, {1, 2, 3, 4}};
+        check("0.5-4.5 V 0-100 bar sensor at 2.5 V reads 50", fabsf(daq_input_convert(&lin, 2.5f) - 50.0f) < 0.001f);
+        check("thermistor at half supply is 25 C", fabsf(daq_input_convert(&ntc, 1.65f) - 25.0f) < 0.01f);
+        check("thermistor at 1k is about 87.7 C", fabsf(daq_input_convert(&ntc, 0.3f) - 87.72f) < 0.2f);
+        check("thermistor unplugged reads -50", daq_input_convert(&ntc, 3.3f) == -50.0f);
+        check("thermistor shorted reads 250", daq_input_convert(&ntc, 0.0f) == 250.0f);
+        check("an input that's off reads 0", daq_input_convert(&off, 3.0f) == 0.0f);
+        check("factory has every spare input off", strstr(ask(&sp, "GM,GET"), "inputs=0") != NULL);
+
+        check("IN linear", starts(ask(&sp, "GM,IN,0,1,25,-12.5,0,0"), "$GM,OK"));
+        check("IN thermistor on an ADS1115 input", starts(ask(&sp, "GM,IN,5,2,10000,10000,3950,5"), "$GM,OK"));
+        check("IN wheel speed on a frequency input", starts(ask(&sp, "GM,IN,11,1,0.3,0,0,0"), "$GM,OK"));
+        check("IN thermistor on a frequency input refused", starts(ask(&sp, "GM,IN,11,2,10000,10000,3950,5"), "$GM,ERR,range"));
+        check("IN thermistor with no beta refused", starts(ask(&sp, "GM,IN,1,2,10000,10000,0,5"), "$GM,ERR,range"));
+        check("IN past the last input refused", starts(ask(&sp, "GM,IN,15,1,1,0,0,0"), "$GM,ERR,range"));
+        check("IN unknown kind refused", starts(ask(&sp, "GM,IN,0,3,1,0,0,0"), "$GM,ERR,range"));
+        check("IN with a missing number refused", starts(ask(&sp, "GM,IN,0,1,1,0,0"), "$GM,ERR,format"));
+        check("IN with nan refused", starts(ask(&sp, "GM,IN,0,1,nan,0,0,0"), "$GM,ERR,range"));
+        check("IN with text refused", starts(ask(&sp, "GM,IN,0,1,x,0,0,0"), "$GM,ERR,format"));
+        check("GET counts the inputs", strstr(ask(&sp, "GM,GET"), "inputs=3") != NULL);
+        check("spare input in a screen frame", starts(ask(&sp, "GM,SF,4,604,60/0/16/0/1/10,71/2/16/0/1/10"), "$GM,OK"));
+        check("spare input in the radio packet", starts(ask(&sp, "GM,RP,21,60/6,65/3"), "$GM,OK") &&
+              starts(ask(&sp, "GM,RPN,23"), "$GM,OK"));
+        sp.can.rpm = 900;
+        check("IN refused while the engine runs", starts(ask(&sp, "GM,IN,1,1,1,0,0,0"), "$GM,ERR,moving"));
+        sp.can.rpm = 0;
+        check("SAVE with inputs", starts(ask(&sp, "GM,SAVE"), "$GM,OK"));
+        ask(&sp, "GM,GETL");
+        int in_lines = 0;
+        for (int i = 0; i < n_replies; i++) in_lines += starts(replies[i], "$GM,IN,") ? 1 : 0;
+        check("GETL lists the three inputs", in_lines == 3 && starts(replies[n_replies - 4], "$GM,IN,0,1,25,-12.5,0,0*"));
+
+        sp.spare_raw[0] = 2.5f;      /* 50 bar */
+        sp.spare_raw[5] = 2.5f;      /* 25 C */
+        sp.spare_raw[11] = 100.0f;   /* 30 km/h */
+        sp.spare_fitted = 1;
+        uint32_t id;
+        uint8_t fb[8], pk[DAQ_MAX_PACKET_BYTES];
+        check("frame 0x604 carries 50.0 bar and 30.0 km/h", daq_build_screen_frame(&live, 4, &sp, &id, fb) && id == 0x604 &&
+              fb[0] == 0xF4 && fb[1] == 0x01 && fb[2] == 0x2C && fb[3] == 0x01);
+        int len = daq_build_radio_packet(&live, &sp, pk, sizeof(pk));
+        float bar;
+        memcpy(&bar, pk + 5 + 64, 4);
+        check("radio packet carries the input", len == 5 + 64 + 4 + 2 && bar == 50.0f && pk[5 + 68] == 25 && pk[5 + 69] == 0);
+        check("GETI gives live values", starts(ask(&sp, "GM,GETI"), "$GM,INV,1,50,0,0,0,0,25,0,0,0,0,0,30,0,0,0*"));
+        check("back to factory", starts(ask(&sp, "GM,FACTORY"), "$GM,OK") && live.inputs[0].kind == DAQ_IN_OFF);
+    }
 
     /* rubbish in never crashes */
     char junk[320];

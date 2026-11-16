@@ -63,7 +63,14 @@ class DaqSettingsView(View):
             "exactly what the FS26 firmware sent: frames 0x600 to 0x603, a 68-byte radio packet twice a second, "
             "GPS at 5 Hz.\n\n"
             "The line format is written up in the repo wiki: DAQ-Settings-Protocol.", "dim", wrap=True))
+        self.inputs_title = label("Spare inputs", "h2")
+        self.inputs_text = label("None set up. Add a channel in the Channels view with 'Spare input on the DAQ', "
+                                 "then Send to DAQ.", "dim", wrap=True)
+        self.layout_card.add(self.inputs_title)
+        self.layout_card.add(self.inputs_text)
         self.layout_card.lay.addStretch(1)
+        self.inputs: list = []
+        self._ticks = 0
 
         self.root.addWidget(self.banner)
         self.root.addLayout(hbox((self.form_card, 2), (self.layout_card, 3), spacing=12))
@@ -97,7 +104,8 @@ class DaqSettingsView(View):
             self.hub.notice.emit("info", "Plug the DAQ in over USB, choose 'DAQ over USB' in the top bar and "
                                          "Connect. Then try again.")
             return False
-        if self.hub.daq.busy:
+        if not self.hub.daq_free():
+            self.hub.notice.emit("info", "Still talking to the DAQ. Give it a second and try again.")
             return False
         if changing and not self.hub.engine.car_stationary():
             self.hub.notice.emit("warn", "Settings can only be changed when the car isn't moving and the engine "
@@ -148,10 +156,48 @@ class DaqSettingsView(View):
                 ids = ", ".join(f"0x{fid:03X}" for fid, _ in layout["frames"])
                 lines.insert(2, f"Frame IDs: {ids}")
             self.summary.setText("\n".join(lines))
+        if layout:
+            self.inputs = layout.get("inputs") or []
+            self._show_inputs(None)
+
+    def _input_owner(self, name: str) -> str:
+        for ch in self.hub.cfg.channels:
+            src = ch.get("source") or {}
+            if src.get("type") == "daq_input" and src.get("input") == name:
+                return f"{ch.get('name') or ch.get('key')}{(' (' + ch['units'] + ')') if ch.get('units') else ''}"
+        return "not in the channel list"
+
+    def _show_inputs(self, live) -> None:
+        used = [(i, c) for i, c in enumerate(self.inputs) if c[0]]
+        if not used:
+            self.inputs_text.setText("None set up. Add a channel in the Channels view with 'Spare input on the "
+                                     "DAQ', then Send to DAQ.")
+            return
+        kinds = {proto.IN_LINEAR: "straight line", proto.IN_THERMISTOR: "thermistor"}
+        lines = []
+        for i, c in used:
+            name = proto.INPUT_NAMES[i]
+            now = ""
+            if live:
+                fitted, values = live
+                board = (i - 3) // 4 if name[0] == "X" else None
+                if board is not None and not fitted & (1 << board):
+                    now = "   board not fitted"
+                elif i < len(values):
+                    now = f"   now {values[i]:.2f}"
+            lines.append(f"{name} ({proto.INPUT_PINS[name]}): {self._input_owner(name)}, {kinds.get(c[0], '?')}{now}")
+        self.inputs_text.setText("\n".join(lines))
 
     def _done(self, result: dict):
         self.check_btn.setEnabled(True)
         if result["op"] == "layout":
+            if result["ok"] and result["layout"]:
+                self.inputs = result["layout"].get("inputs") or []
+                self._show_inputs(None)
+            return
+        if result["op"] == "inputs":
+            if result["ok"] and result["live"]:
+                self._show_inputs(result["live"])
             return
         if not result["ok"]:
             if result["code"] == "old":
@@ -178,6 +224,10 @@ class DaqSettingsView(View):
             self.hub.notice.emit("info", "The DAQ is back on factory settings.")
 
     def refresh(self) -> None:
+        self._ticks += 1
+        if (self.supported and self._ticks % 2 == 0 and any(c[0] for c in self.inputs) and not self.hub.daq.busy
+                and self.hub.daq_can_talk()):
+            self.hub.daq.read_inputs()
         if not self.supported:
             self.safety.setText("Greyed out until Check DAQ has read the settings.")
         elif not self.hub.engine.car_stationary():

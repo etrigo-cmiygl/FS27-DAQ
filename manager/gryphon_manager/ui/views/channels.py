@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QTabWidget)
 
 from ... import theme
+from ...core import daq_protocol as proto
 from ...core.config import RADIO_RATES
 from ...core.model import fmt_id, parse_int
 from ..widgets import Card, SimpleTableModel, View, button, fmt_num, hbox, label, setup_table, vbox
@@ -38,7 +39,8 @@ def source_summary(ch: dict) -> str:
     if t == "daq":
         return f"DAQ: {src.get('field', '')}"
     if t == "daq_input":
-        return f"DAQ input {src.get('input', '')}"
+        sensor = proto.SENSORS.get(src.get("sensor", ""), "raw")
+        return f"DAQ input {src.get('input', '')}, {sensor.split(' (')[0].lower()}"
     return "not set"
 
 
@@ -91,9 +93,20 @@ class ChannelDialog(QDialog):
         self.field = QComboBox()
         self.field.setEditable(True)
         self.input = QComboBox()
-        self.input.setEditable(True)
-        self.input.addItems(["A0", "A1", "A2", "A3", "F0", "F1"])
-        self.input.setCurrentText(str(src.get("input", "A0")))
+        for name in proto.INPUT_NAMES:
+            self.input.addItem(f"{name}   {proto.INPUT_PINS[name]}, {proto.INPUT_WHERE[name[0]]}", name)
+        self.input.setCurrentIndex(max(0, self.input.findData(str(src.get("input", "A0")))))
+        self.input.setToolTip("A0-A2 are pins on the Pico (3.3 V at most). X0-X7 are the two ADS1115 boards (5 V "
+                              "sensors). F0-F3 count pulses.")
+        self.sensor = QComboBox()
+        self.sensor.addItem("Raw volts or Hz, no scaling", "")
+        for key, text in proto.SENSORS.items():
+            self.sensor.addItem(text, key)
+        self.sensor.setCurrentIndex(max(0, self.sensor.findData(src.get("sensor", "") if src.get("type") == "daq_input"
+                                                                else "")))
+        self.sensor_values = dict(src) if src.get("type") == "daq_input" else {}
+        self.params = [QLineEdit() for _ in range(5)]
+        self.param_keys: list[str] = []
         self.scale = QLineEdit(str(c.get("scale", 1)))
         self.scale.setToolTip("Real value = raw number x scale. e.g. raw 650 x 0.1 = 65.0 %")
         self.units = QLineEdit(c.get("units", "") or "")
@@ -129,8 +142,13 @@ class ChannelDialog(QDialog):
         f.addRow("", self.signed)
         self.rows["field"] = [f.rowCount()]
         f.addRow("Field", self.field)
-        self.rows["daq_input"] = [f.rowCount()]
+        self.rows["daq_input"] = [f.rowCount(), f.rowCount() + 1]
         f.addRow("Input", self.input)
+        f.addRow("Sensor", self.sensor)
+        self.param_rows = []
+        for w in self.params:
+            self.param_rows.append(f.rowCount())
+            f.addRow(label(""), w)
         f.addRow("Scale", self.scale)
         f.addRow("Units", self.units)
         f.addRow("Expected range", hbox(self.vmin, label("to"), self.vmax))
@@ -142,6 +160,7 @@ class ChannelDialog(QDialog):
         box.rejected.connect(self.reject)
         self.setLayout(vbox(self.form, box, margins=(18, 18, 18, 18)))
         self.stype.currentIndexChanged.connect(self._sync)
+        self.sensor.currentIndexChanged.connect(self._sync)
         self._field_value = str(src.get("field", ""))
         self._sync()
 
@@ -151,6 +170,17 @@ class ChannelDialog(QDialog):
             show = (key == t) or (key == "field" and t in ("gps", "daq"))
             for r in rows:
                 self.form.setRowVisible(r, show)
+        specs = proto.SENSOR_PARAMS.get(self.sensor.currentData(), []) if t == "daq_input" else []
+        self.param_keys = [key for key, _, _ in specs]
+        for i, (row, w) in enumerate(zip(self.param_rows, self.params)):
+            self.form.setRowVisible(row, i < len(specs))
+            if i < len(specs):
+                key, text, usual = specs[i]
+                self.form.itemAt(row, QFormLayout.LabelRole).widget().setText(text)
+                try:
+                    w.setText(f"{float(self.sensor_values.get(key, usual)):g}")
+                except (TypeError, ValueError):
+                    w.setText(f"{usual:g}")
         if t in ("gps", "daq"):
             self.field.clear()
             self.field.addItems(GPS_FIELDS if t == "gps" else DAQ_FIELDS)
@@ -184,7 +214,17 @@ class ChannelDialog(QDialog):
         elif t in ("gps", "daq"):
             src = {"type": t, "field": self.field.currentText().strip()}
         else:
-            src = {"type": "daq_input", "input": self.input.currentText().strip()}
+            src = {"type": "daq_input", "input": self.input.currentData()}
+            if self.sensor.currentData():
+                src["sensor"] = self.sensor.currentData()
+                try:
+                    for key, w in zip(self.param_keys, self.params):
+                        src[key] = float(w.text().strip())
+                    proto.input_config(src)
+                except ValueError as exc:
+                    text = str(exc) if "could not convert" not in str(exc) else "the sensor numbers must all be numbers."
+                    QMessageBox.information(self, "Channel", "That sensor setup won't work: " + text)
+                    return
         out = {"key": self.key.text().strip(), "name": self.name.text().strip(),
                "group": self.group.currentText().strip(), "source": src}
         if t == "ecu":
@@ -705,14 +745,14 @@ class ChannelsView(View):
         self.dirty = False
         self._fill()
 
-    def _save(self) -> bool:
-        if not self.valid:
+    def _save(self, ask: bool = True) -> bool:
+        if ask and not self.valid:
             ok = QMessageBox.question(self, "Save with problems?",
                                       "The checks found problems. Save anyway? (Generate stays blocked until "
                                       "they're fixed.)")
             if ok != QMessageBox.Yes:
                 return False
-        if self.hub.connected:
+        if ask and self.hub.connected:
             ok = QMessageBox.question(self, "Save", "Saving reloads the config, so live values start again "
                                                     "from empty. Carry on?")
             if ok != QMessageBox.Yes:
@@ -755,7 +795,6 @@ class ChannelsView(View):
                         "load gryphon_screen.dbc into the Winstar builder if the screen frames changed.")
 
     def _send_to_daq(self, confirm: bool = True):
-        from ...core import daq_protocol as proto
         if not self.valid:
             QMessageBox.information(self, "Send to DAQ", "Fix the problems listed under Checks first.")
             return
@@ -767,18 +806,29 @@ class ChannelsView(View):
             QMessageBox.information(self, "Send to DAQ", "The car is moving or the engine is running. The DAQ only "
                                                          "takes new settings when it's stopped.")
             return
+        if not self.hub.daq_free():
+            QMessageBox.information(self, "Send to DAQ", "Still talking to the DAQ. Give it a second and try again.")
+            return
         layout, problems = proto.layout_from_config(self.cfg)
         if problems:
             QMessageBox.information(self, "Send to DAQ", "The DAQ can't do this layout yet:\n\n" + "\n".join(problems))
             return
-        size = proto.packet_size(layout["radio"], False)
-        text = (f"This loads {len(layout['frames'])} screen frames and {len(layout['radio'])} radio fields into the "
-                f"DAQ and saves them (radio packet up to {size} bytes, layout version {layout['layout']}).\n\n"
-                "If the radio packet changed, the pit receiver and anything reading it need the same layout.\n\n"
-                "Send it?")
+        from ...core.daq_sim import FACTORY_RADIO
+        factory_radio = layout["radio"] == FACTORY_RADIO
+        used = sum(1 for i in layout["inputs"] if i[0])
+        text = (f"This loads {len(layout['frames'])} screen frames, {len(layout['radio'])} radio fields and "
+                f"{used} spare inputs into the DAQ and saves them.\n\n")
+        if factory_radio:
+            text += "The radio packet is the standard 68-byte one, so the pit receiver carries on working.\n\n"
+        else:
+            text += (f"The radio packet is NOT the standard one any more ({proto.packet_size(layout['radio'], False)} "
+                     f"bytes, layout version {layout['layout']}). The pit receiver's current firmware only "
+                     "understands the standard packet, so live telemetry in the pits will stop until the "
+                     "receiver is updated too. Screen frames and spare inputs don't have this problem.\n\n")
+        text += "Send it?"
         if confirm and QMessageBox.question(self, "Send to DAQ", text) != QMessageBox.Yes:
             return
-        if self.dirty and not self._save():
+        if self.dirty and not self._save(ask=confirm):
             return
         self.btn_send.setEnabled(False)
         self.hub.daq.send_layout(layout)

@@ -60,7 +60,7 @@ add_executable(FS27-DAQ
     can_handler_fs27.c
     ft550_decoder.c
     daq_settings_fs27.c
-    daq_flash_fs27.c
+    daq_flash_fs27.c daq_inputs_fs27.c
 )
 
 pico_set_program_name(FS27-DAQ "FS27-DAQ")
@@ -76,11 +76,16 @@ target_link_libraries(FS27-DAQ
         pico_multicore
         pico_flash
         hardware_flash
+        hardware_adc
+        hardware_i2c
         gpio
         spi
         lr1121
         mcp2515
 )
+
+# 4 KB is the most each core's stack can have on the RP2350 (the default is 2 KB)
+target_compile_definitions(FS27-DAQ PRIVATE PICO_STACK_SIZE=0x1000 PICO_CORE1_STACK_SIZE=0x1000)
 
 # Add the standard include files to the build
 target_include_directories(FS27-DAQ PRIVATE

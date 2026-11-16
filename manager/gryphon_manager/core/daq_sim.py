@@ -26,11 +26,11 @@ def factory() -> dict:
         frames[i] = (fr[0], list(fr[1]))
     radio = list(FACTORY_RADIO) + [(0, 0)] * (proto.MAX_FIELDS - len(FACTORY_RADIO))
     return {"gps_hz": 5, "radio_hz": 2, "screen_hz": 20, "layout": 1, "frames": frames, "radio": radio,
-            "n_radio": len(FACTORY_RADIO), "counter": 0}
+            "n_radio": len(FACTORY_RADIO), "inputs": [proto.INPUT_OFF] * len(proto.INPUT_NAMES), "counter": 0}
 
 
 def source_ok(src: int) -> bool:
-    return 1 <= src <= 37 or 40 <= src <= 45 or src in (50, 51)
+    return 1 <= src <= 37 or 40 <= src <= 45 or src in (50, 51) or 60 <= src <= 74
 
 
 def is_factory_radio(s: dict) -> bool:
@@ -51,6 +51,11 @@ def in_range(s: dict) -> bool:
             return False
     if packet_size(s) > proto.MAX_PACKET:
         return False
+    for i, (kind, *p) in enumerate(s["inputs"]):
+        if kind not in (0, 1, 2) or any(x != x or not -1e30 < x < 1e30 for x in p):
+            return False
+        if kind == proto.IN_THERMISTOR and (i >= proto.ANALOG_INPUTS or min(p) <= 0):
+            return False
     ids = set()
     for fr in s["frames"]:
         if not fr or not fr[1]:
@@ -84,12 +89,17 @@ def _uint(text: str, base: int, top: int):
 
 
 def _float(text: str):
+    """Like the firmware's strtof: takes nan and inf too, and turns too-big numbers into inf."""
     if not text or text != text.strip() or "_" in text:
         return None
     try:
-        return proto.f32(float(text))
-    except (ValueError, OverflowError):
+        v = float(text)
+    except ValueError:
         return None
+    try:
+        return proto.f32(v)
+    except OverflowError:
+        return float("inf") if v > 0 else float("-inf")
 
 
 class DaqSim:
@@ -98,6 +108,8 @@ class DaqSim:
         self.pending = copy.deepcopy(self.live)
         self.saved = False
         self.flash_fail = False
+        self.spare_raw = [0.0] * len(proto.INPUT_NAMES)
+        self.spare_fitted = 0
 
     def _ok(self) -> str:
         return proto.build_line("OK", settings=self.live["counter"])
@@ -128,7 +140,8 @@ class DaqSim:
             return [proto.build_line("VAL", gps_hz=s["gps_hz"], radio_hz=s["radio_hz"], screen_hz=s["screen_hz"],
                                      layout=s["layout"], frames=sum(1 for f in s["frames"] if f and f[1]),
                                      fields=s["n_radio"], packet=packet_size(s),
-                                     unsaved=0 if self.pending == self.live else 1)]
+                                     unsaved=0 if self.pending == self.live else 1,
+                                     inputs=sum(1 for i in s["inputs"] if i[0]))]
         if cmd == "GETL":
             out = []
             for i, fr in enumerate(s["frames"]):
@@ -138,11 +151,17 @@ class DaqSim:
                 out.append(proto.build_line("RP", start, *[f"{a}/{b}" for a, b in
                                                            s["radio"][start:min(start + 12, s["n_radio"])]]))
             out.append(proto.build_line("RPN", s["n_radio"]))
+            for i, (kind, *p) in enumerate(s["inputs"]):
+                if kind:
+                    out.append(proto.build_line("IN", i, kind, *[proto.fmt_float(x) for x in p]))
             return out + [self._ok()]
+        if cmd == "GETI":
+            return [proto.build_line("INV", self.spare_fitted & 3, *["%.6g" % proto.input_convert(c, x)
+                                                                    for c, x in zip(s["inputs"], self.spare_raw)])]
         if cmd == "CANCEL":
             self.pending = copy.deepcopy(self.live)
             return [self._ok()]
-        if cmd not in ("SET", "SF", "RP", "RPN", "SAVE", "FACTORY"):
+        if cmd not in ("SET", "SF", "RP", "RPN", "IN", "SAVE", "FACTORY"):
             return [self._err("unknown")]
         if rpm > 0 or speed > 2.0:
             return [self._err("moving")]
@@ -171,6 +190,8 @@ class DaqSim:
             err = self._screen_frame(args)
         elif cmd == "RP":
             err = self._radio_fields(args)
+        elif cmd == "IN":
+            err = self._input(args)
         elif cmd == "RPN":
             n = _uint(args[0], 10, proto.MAX_FIELDS) if len(args) == 1 else None
             if n is None or n < 1:
@@ -210,6 +231,22 @@ class DaqSim:
             sigs.append((*ints, m1, m2))
         trial = copy.deepcopy(self.pending)
         trial["frames"][idx] = (fid, sigs)
+        if not in_range(trial):
+            return "range"
+        self.pending = trial
+        return None
+
+    def _input(self, args) -> str | None:
+        if len(args) != 6:
+            return "format"
+        idx, kind = _uint(args[0], 10, len(proto.INPUT_NAMES) - 1), _uint(args[1], 10, 2)
+        if idx is None or kind is None:
+            return "range"
+        p = [_float(a) for a in args[2:]]
+        if None in p:
+            return "format"
+        trial = copy.deepcopy(self.pending)
+        trial["inputs"][idx] = (kind, *p)
         if not in_range(trial):
             return "range"
         self.pending = trial

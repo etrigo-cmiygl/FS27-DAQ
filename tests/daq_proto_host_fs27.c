@@ -4,7 +4,7 @@
  *   cc -I.. -o daq_proto_host daq_proto_host_fs27.c ../daq_settings_fs27.c ../ft550_decoder.c -lm
  *
  * Reads lines on stdin, prints the DAQ's replies. Lines starting with '!' set the pretend car:
- *   !rpm=1500   !speed=30   !flashfail=1
+ *   !rpm=1500   !speed=30   !flashfail=1   !raw=<input>,<volts or Hz>   !fitted=<0-3>   !packet
  * After each input line it prints a line holding only "." so the caller knows the replies are complete.
  */
 #include <stdio.h>
@@ -35,6 +35,12 @@ int main(void) {
             if (strncmp(line, "!rpm=", 5) == 0) in.can.rpm = (uint16_t)atoi(line + 5);
             else if (strncmp(line, "!speed=", 7) == 0) in.speed_kph = (float)atof(line + 7);
             else if (strncmp(line, "!flashfail=", 11) == 0) flash_fail = atoi(line + 11);
+            else if (strncmp(line, "!fitted=", 8) == 0) in.spare_fitted = (uint16_t)atoi(line + 8);
+            else if (strncmp(line, "!raw=", 5) == 0) {
+                int idx = atoi(line + 5);
+                const char* comma = strchr(line, ',');
+                if (comma && idx >= 0 && idx < DAQ_SPARE_INPUTS) in.spare_raw[idx] = (float)atof(comma + 1);
+            }
             else if (strcmp(line, "!packet") == 0) {
                 uint8_t buf[DAQ_MAX_PACKET_BYTES];
                 int n = daq_build_radio_packet(&live, &in, buf, sizeof(buf));

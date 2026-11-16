@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from . import daq_protocol as proto
 
-TERMINAL = ("OK", "ERR", "HELLO", "VAL")
+ANSWER = {"HELLO": "HELLO", "GET": "VAL", "GETI": "INV"}   # every other command ends with OK
 OLD_FIRMWARE = ("The DAQ didn't answer, so it's running the older firmware that has no settings. "
                 "Nothing was changed. Flash the v2 firmware from the Firmware view to use this.")
 
@@ -39,6 +39,9 @@ class DaqClient:
                     + [proto.build_line("SAVE"), proto.build_line("GET"), proto.build_line("GETL")],
                     {"layout": layout})
 
+    def read_inputs(self) -> None:
+        self._start("inputs", [proto.build_line("GETI")])
+
     def factory(self) -> None:
         self._start("factory", [proto.build_line("FACTORY"), proto.build_line("GET"), proto.build_line("GETL")])
 
@@ -50,10 +53,11 @@ class DaqClient:
             return
         self._replies.append(parsed)
         cmd, args = parsed
+        sent = (proto.parse_line(self._lines[self._pos]) or ("", []))[0]
         if cmd == "ERR":
             self._finish(False, proto.ERRORS.get(args[0] if args else "", "the DAQ refused, with no reason given."),
                          args[0] if args else "")
-        elif cmd in TERMINAL:
+        elif cmd == ANSWER.get(sent, "OK"):
             self._waiting = False
             self._pos += 1
 
@@ -86,11 +90,16 @@ class DaqClient:
         return None
 
     def cancel(self) -> None:
-        self.busy = False
+        self.busy, self._waiting, self.result = False, False, None
 
     def _finish(self, ok: bool, error: str, code: str) -> None:
-        hello = val = None
+        hello = val = live = None
         for cmd, args in self._replies:
+            if cmd == "INV":
+                try:
+                    live = (int(args[0]), [float(a) for a in args[1:]])
+                except (ValueError, IndexError):
+                    live = None
             if cmd == "HELLO":
                 hello = proto.key_values(args)
             elif cmd == "VAL":
@@ -106,5 +115,5 @@ class DaqClient:
                 ok, error, code = False, "The DAQ answered, but read back a different layout to the one sent.", "verify"
         self._waiting = False
         self.result = {"op": self.op, "ok": ok, "error": error, "code": code, "hello": hello, "val": val,
-                       "layout": layout}
+                       "layout": layout, "live": live}
         self.busy = False

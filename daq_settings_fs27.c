@@ -4,6 +4,7 @@
  */
 #include "daq_settings_fs27.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,7 +95,25 @@ void daq_settings_factory(daq_settings_t* s) {
 
 static bool source_ok(uint8_t src) {
     return (src >= 1 && src <= DAQ_SRC_BATTERY) || (src >= DAQ_SRC_GPS_LAT && src <= DAQ_SRC_GPS_FIX) ||
-           src == DAQ_SRC_TX_COUNT || src == DAQ_SRC_CAN_COUNT;
+           src == DAQ_SRC_TX_COUNT || src == DAQ_SRC_CAN_COUNT ||
+           (src >= DAQ_SRC_SPARE_FIRST && src <= DAQ_SRC_SPARE_LAST);
+}
+
+static bool finite_f(float x) { return x == x && x > -1e30f && x < 1e30f; }
+
+float daq_input_convert(const daq_input_cfg_t* c, float x) {
+    if (c->kind == DAQ_IN_LINEAR) return c->p[0] * x + c->p[1];
+    if (c->kind == DAQ_IN_THERMISTOR) {
+        float supply = c->p[3];
+        if (x >= supply - 0.01f) return -50.0f;
+        if (x <= 0.01f) return 250.0f;
+        float ohms = c->p[0] * x / (supply - x);
+        float t = 1.0f / (1.0f / 298.15f + logf(ohms / c->p[1]) / c->p[2]) - 273.15f;
+        if (t < -50.0f) t = -50.0f;
+        if (t > 250.0f) t = 250.0f;
+        return t;
+    }
+    return 0.0f;
 }
 
 static int type_size(uint8_t type) {
@@ -124,6 +143,17 @@ bool daq_settings_in_range(const daq_settings_t* s) {
         if (!source_ok(s->radio[i].src) || s->radio[i].type >= DAQ_T_LIMIT) return false;
     }
     if (daq_radio_packet_size(s) > DAQ_MAX_PACKET_BYTES) return false;
+    for (int i = 0; i < DAQ_SPARE_INPUTS; i++) {
+        const daq_input_cfg_t* c = &s->inputs[i];
+        if (c->kind >= DAQ_IN_LIMIT) return false;
+        for (int k = 0; k < 4; k++) {
+            if (!finite_f(c->p[k])) return false;
+        }
+        if (c->kind == DAQ_IN_THERMISTOR) {
+            if (i >= DAQ_SPARE_ANALOG) return false;
+            if (!(c->p[0] > 0.0f && c->p[1] > 0.0f && c->p[2] > 0.0f && c->p[3] > 0.0f)) return false;
+        }
+    }
     for (int i = 0; i < DAQ_MAX_SCREEN_FRAMES; i++) {
         const daq_screen_frame_t* f = &s->frames[i];
         if (f->n == 0) continue;
@@ -158,8 +188,12 @@ static daq_value_t vf(float f) { daq_value_t v = {0, f, 0}; return v; }
 static daq_value_t vu(uint32_t u) { daq_value_t v = {1, 0.0f, u}; return v; }
 static daq_value_t vi(int32_t i) { daq_value_t v = {2, 0.0f, (uint32_t)i}; return v; }
 
-static daq_value_t source_value(const daq_inputs_t* in, uint8_t src) {
+static daq_value_t source_value(const daq_settings_t* s, const daq_inputs_t* in, uint8_t src) {
     const ft550_sensor_data_t* c = &in->can;
+    if (src >= DAQ_SRC_SPARE_FIRST && src <= DAQ_SRC_SPARE_LAST) {
+        int i = src - DAQ_SRC_SPARE_FIRST;
+        return vf(daq_input_convert(&s->inputs[i], in->spare_raw[i]));
+    }
     switch (src) {
         case DAQ_SRC_TPS: return vf(c->tps);
         case DAQ_SRC_MAP: return vf(c->map);
@@ -235,7 +269,7 @@ bool daq_build_screen_frame(const daq_settings_t* s, int idx, const daq_inputs_t
     for (int j = 0; j < f->n; j++) {
         const daq_screen_signal_t* g = &f->sig[j];
         if (g->byte + g->bits / 8 > 8) continue;
-        daq_value_t v = source_value(in, g->src);
+        daq_value_t v = source_value(s, in, g->src);
         uint32_t raw;
         if (v.kind != 0 && g->m1 == 1.0f && g->m2 == 1.0f) {
             raw = v.u;
@@ -259,7 +293,7 @@ int daq_build_radio_packet(const daq_settings_t* s, const daq_inputs_t* in, uint
         buf[at++] = s->layout_version;
     }
     for (int i = 0; i < s->n_radio; i++) {
-        daq_value_t v = source_value(in, s->radio[i].src);
+        daq_value_t v = source_value(s, in, s->radio[i].src);
         uint8_t type = s->radio[i].type;
         if (type == DAQ_T_F32) {
             float f = as_float(v);
@@ -344,6 +378,10 @@ static int split(char* text, char sep, char** parts, int max) {
     return n;
 }
 
+/* One working copy for every command that edits settings, kept off the stack (it's over 1 KB and the Pico's
+   stacks are 4 KB). The settings conversation only ever runs on core 0. */
+static daq_settings_t work_copy;
+
 static bool set_value(daq_settings_t* s, const char* key, const char* value) {
     unsigned long v;
     if (!parse_uint(value, 10, 255, &v)) return false;
@@ -374,10 +412,10 @@ static const char* cmd_screen_frame(daq_settings_t* s, char** arg, int n) {
         if (*piece[4] == '\0' || *e1 != '\0' || *piece[5] == '\0' || *e2 != '\0') return "format";
         add_signal(&f, (uint8_t)src, (uint8_t)byte, (uint8_t)bits, (uint8_t)sg, m1, m2);
     }
-    daq_settings_t trial = *s;
-    trial.frames[idx] = f;
-    if (!daq_settings_in_range(&trial)) return "range";
-    *s = trial;
+    work_copy = *s;
+    work_copy.frames[idx] = f;
+    if (!daq_settings_in_range(&work_copy)) return "range";
+    *s = work_copy;
     return NULL;
 }
 
@@ -385,17 +423,34 @@ static const char* cmd_radio_fields(daq_settings_t* s, char** arg, int n) {
     unsigned long start;
     if (n < 2 || !parse_uint(arg[0], 10, DAQ_MAX_RADIO_FIELDS - 1, &start)) return "range";
     if ((int)start + (n - 1) > DAQ_MAX_RADIO_FIELDS) return "range";
-    daq_settings_t trial = *s;
+    work_copy = *s;
     for (int i = 1; i < n; i++) {
         char* piece[2];
         unsigned long src, type;
         if (split(arg[i], '/', piece, 2) != 2) return "format";
         if (!parse_uint(piece[0], 10, 255, &src) || !parse_uint(piece[1], 10, DAQ_T_LIMIT - 1, &type)) return "range";
         if (!source_ok((uint8_t)src)) return "range";
-        trial.radio[start + i - 1].src = (uint8_t)src;
-        trial.radio[start + i - 1].type = (uint8_t)type;
+        work_copy.radio[start + i - 1].src = (uint8_t)src;
+        work_copy.radio[start + i - 1].type = (uint8_t)type;
     }
-    *s = trial;
+    *s = work_copy;
+    return NULL;
+}
+
+static const char* cmd_input(daq_settings_t* s, char** arg, int n) {
+    unsigned long idx, kind;
+    if (n != 6) return "format";
+    if (!parse_uint(arg[0], 10, DAQ_SPARE_INPUTS - 1, &idx) || !parse_uint(arg[1], 10, DAQ_IN_LIMIT - 1, &kind)) return "range";
+    work_copy = *s;
+    work_copy.inputs[idx].kind = (uint8_t)kind;
+    for (int k = 0; k < 4; k++) {
+        char* end;
+        float v = strtof(arg[2 + k], &end);
+        if (*arg[2 + k] == '\0' || *end != '\0') return "format";
+        work_copy.inputs[idx].p[k] = v;
+    }
+    if (!daq_settings_in_range(&work_copy)) return "range";
+    *s = work_copy;
     return NULL;
 }
 
@@ -422,6 +477,13 @@ static void send_layout(daq_proto_t* p) {
     }
     snprintf(body, sizeof(body), "GM,RPN,%u", s->n_radio);
     send(p, body);
+    for (int i = 0; i < DAQ_SPARE_INPUTS; i++) {
+        const daq_input_cfg_t* c = &s->inputs[i];
+        if (c->kind == DAQ_IN_OFF) continue;
+        snprintf(body, sizeof(body), "GM,IN,%d,%u,%.9g,%.9g,%.9g,%.9g", i, c->kind, (double)c->p[0], (double)c->p[1],
+                 (double)c->p[2], (double)c->p[3]);
+        send(p, body);
+    }
 }
 
 bool daq_proto_handle(daq_proto_t* p, const daq_inputs_t* in, const char* line) {
@@ -454,17 +516,28 @@ bool daq_proto_handle(daq_proto_t* p, const daq_inputs_t* in, const char* line) 
     }
     if (strcmp(cmd, "GET") == 0) {
         const daq_settings_t* s = p->pending;
-        int frames = 0;
+        int frames = 0, inputs = 0;
         for (int i = 0; i < DAQ_MAX_SCREEN_FRAMES; i++) frames += s->frames[i].n ? 1 : 0;
+        for (int i = 0; i < DAQ_SPARE_INPUTS; i++) inputs += s->inputs[i].kind != DAQ_IN_OFF ? 1 : 0;
         snprintf(body, sizeof(body), "GM,VAL,gps_hz=%u,radio_hz=%u,screen_hz=%u,layout=%u,frames=%d,fields=%u,packet=%d,"
-                 "unsaved=%d", s->gps_hz, s->radio_hz, s->screen_hz, s->layout_version, frames, s->n_radio,
-                 daq_radio_packet_size(s), memcmp(p->pending, p->live, sizeof(*p->live)) != 0 ? 1 : 0);
+                 "unsaved=%d,inputs=%d", s->gps_hz, s->radio_hz, s->screen_hz, s->layout_version, frames, s->n_radio,
+                 daq_radio_packet_size(s), memcmp(p->pending, p->live, sizeof(*p->live)) != 0 ? 1 : 0, inputs);
         send(p, body);
         return true;
     }
     if (strcmp(cmd, "GETL") == 0) {
         send_layout(p);
         send_ok(p);
+        return true;
+    }
+    if (strcmp(cmd, "GETI") == 0) {
+        char wide[300];
+        int at = snprintf(wide, sizeof(wide), "GM,INV,%u", in->spare_fitted & 3u);
+        for (int i = 0; i < DAQ_SPARE_INPUTS; i++) {
+            at += snprintf(wide + at, sizeof(wide) - at, ",%.6g",
+                           (double)daq_input_convert(&p->pending->inputs[i], in->spare_raw[i]));
+        }
+        send(p, wide);
         return true;
     }
     if (strcmp(cmd, "CANCEL") == 0) {
@@ -474,38 +547,39 @@ bool daq_proto_handle(daq_proto_t* p, const daq_inputs_t* in, const char* line) 
     }
 
     bool changes = strcmp(cmd, "SET") == 0 || strcmp(cmd, "SF") == 0 || strcmp(cmd, "RP") == 0 ||
-                   strcmp(cmd, "RPN") == 0 || strcmp(cmd, "SAVE") == 0 || strcmp(cmd, "FACTORY") == 0;
+                   strcmp(cmd, "RPN") == 0 || strcmp(cmd, "IN") == 0 || strcmp(cmd, "SAVE") == 0 || strcmp(cmd, "FACTORY") == 0;
     if (!changes) { send(p, "GM,ERR,unknown"); return true; }
     if (moving(in)) { send(p, "GM,ERR,moving"); return true; }
 
     const char* err = NULL;
     if (strcmp(cmd, "SET") == 0) {
-        daq_settings_t trial = *p->pending;
+        work_copy = *p->pending;
         if (nargs < 1) err = "format";
         for (int i = 0; i < nargs && !err; i++) {
             char* kv[2];
             if (split(arg[i], '=', kv, 2) != 2) err = "format";
-            else if (!set_value(&trial, kv[0], kv[1])) err = "unknown";
+            else if (!set_value(&work_copy, kv[0], kv[1])) err = "unknown";
         }
-        if (!err && !daq_settings_in_range(&trial)) err = "range";
-        if (!err) *p->pending = trial;
+        if (!err && !daq_settings_in_range(&work_copy)) err = "range";
+        if (!err) *p->pending = work_copy;
     } else if (strcmp(cmd, "SF") == 0) {
         err = cmd_screen_frame(p->pending, arg, nargs);
     } else if (strcmp(cmd, "RP") == 0) {
         err = cmd_radio_fields(p->pending, arg, nargs);
+    } else if (strcmp(cmd, "IN") == 0) {
+        err = cmd_input(p->pending, arg, nargs);
     } else if (strcmp(cmd, "RPN") == 0) {
         unsigned long count;
         if (nargs != 1 || !parse_uint(arg[0], 10, DAQ_MAX_RADIO_FIELDS, &count) || count < 1) err = "range";
         else p->pending->n_radio = (uint8_t)count;
     } else {
-        daq_settings_t next;
-        if (strcmp(cmd, "FACTORY") == 0) daq_settings_factory(&next);
-        else next = *p->pending;
-        if (!daq_settings_in_range(&next)) err = "range";
+        if (strcmp(cmd, "FACTORY") == 0) daq_settings_factory(&work_copy);
+        else work_copy = *p->pending;
+        if (!daq_settings_in_range(&work_copy)) err = "range";
         else {
-            next.counter = p->live->counter + 1;
-            daq_settings_seal(&next);
-            if (!p->commit(&next)) err = "flash";
+            work_copy.counter = p->live->counter + 1;
+            daq_settings_seal(&work_copy);
+            if (!p->commit(&work_copy)) err = "flash";
             else {
                 *p->pending = *p->live;
                 p->loaded_from_flash = true;

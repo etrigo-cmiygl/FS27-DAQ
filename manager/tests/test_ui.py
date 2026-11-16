@@ -274,3 +274,51 @@ def test_daq_settings_page_and_send_to_daq_with_the_simulator(win):
     win.hub.disconnect_source()
     pump(win, 0.3)
     assert not view.apply_btn.isEnabled()
+
+
+def test_spare_input_channel_dialog_and_live_values(win):
+    from gryphon_manager.core import daq_protocol as proto
+    from gryphon_manager.ui.views.channels import ChannelDialog
+    dlg = ChannelDialog(win, {"key": "brake_front", "name": "Front brake pressure", "group": "Driver",
+                              "source": {"type": "daq_input", "input": "X0"}, "scale": 1, "units": "bar",
+                              "radio": "off", "screen": False}, True)
+    assert dlg.input.count() == 15 and dlg.input.currentData() == "X0"
+    dlg.sensor.setCurrentIndex(dlg.sensor.findData("linear"))
+    assert [w.text() for w in dlg.params] == ["0.5", "4.5", "0", "100", "1"]
+    dlg.params[3].setText("160")
+    dlg._ok()
+    src = dlg.ch["source"]
+    assert src == {"type": "daq_input", "input": "X0", "sensor": "linear", "v_min": 0.5, "v_max": 4.5,
+                   "value_min": 0.0, "value_max": 160.0, "divider": 1.0}
+    again = ChannelDialog(win, dlg.ch, False)
+    assert again.sensor.currentData() == "linear" and again.params[3].text() == "160"
+    again.sensor.setCurrentIndex(again.sensor.findData("thermistor"))
+    assert [w.text() for w in again.params[:4]] == ["10000", "10000", "3950", "3.3"]
+    assert again.form.isRowVisible(again.param_rows[3]) and not again.form.isRowVisible(again.param_rows[4])
+
+    win.hub.connect_source("sim", parts="all", mode="off", fault="none", warmup=5.0)
+    pump(win, 1.0)
+    win.show_view("channels")
+    ch = win.views["channels"]
+    ch.cfg.channels.append(dlg.ch)
+    ch.cfg.channels.append({"key": "wheel_fl_daq", "name": "Front left wheel (DAQ)", "group": "Wheels", "scale": 1,
+                            "units": "km/h", "radio": "off", "screen": False,
+                            "source": {"type": "daq_input", "input": "F0", "sensor": "wheel_speed", "teeth": 20,
+                                       "circumference_m": 1.6}})
+    ch.cfg.channels.append({"key": "damper", "name": "Damper pot", "group": "Suspension", "scale": 1, "units": "V",
+                            "radio": "off", "screen": False, "source": {"type": "daq_input", "input": "X5"}})
+    ch._changed()
+    assert ch.valid
+    ch._send_to_daq(confirm=False)
+    wait_daq(win, 10.0)
+    sim = win.hub.source.daq
+    assert sim.live["inputs"][3][0] == proto.IN_LINEAR and sim.live["inputs"][11][0] == proto.IN_LINEAR
+    assert abs(sim.live["inputs"][3][1] - 40.0) < 1e-4 and sim.live["n_radio"] == 21
+    win.show_view("daq")
+    view = win.views["daq"]
+    view._check()
+    pump(win, 4.0)
+    assert view.apply_btn.isEnabled()
+    text = view.inputs_text.text()
+    assert "X0 (ADS1115 0x48 A0)" in text and "now 0.00" in text and "F0 (GP16)" in text
+    assert "X5 (ADS1115 0x49 A1)" in text and "board not fitted" in text

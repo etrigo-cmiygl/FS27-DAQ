@@ -238,6 +238,12 @@ class SimSource(Source):
         self._tx.put(text)
 
     def _answer_daq(self, ts: float) -> None:
+        car, raw = self.car, self.daq.spare_raw
+        raw[0] = 1.65 + 0.4 * (car.rpm > 0)
+        raw[3] = 0.5 + 4.0 * min(1.0, car.tps / 100.0)
+        raw[4] = 0.5 + 0.04 * (28.0 if (car.mode == "drive" and car.tps < 1.0) else 0.0)
+        raw[11] = raw[12] = car.speed / (1.6 * 3.6 / 20.0)
+        self.daq.spare_fitted = 1
         while not self._tx.empty():
             for reply in self.daq.handle(self._tx.get(), self.car.rpm, self.car.speed):
                 self.emit("daqline", (ts, reply))

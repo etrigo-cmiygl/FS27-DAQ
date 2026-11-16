@@ -264,6 +264,12 @@ class MasterConfig:
                 problems.append(f"{label}: {stype} source needs a field.")
             elif stype == "daq_input" and not src.get("input"):
                 problems.append(f"{label}: DAQ input source needs an input name (e.g. A0).")
+            elif stype == "daq_input":
+                from . import daq_protocol
+                try:
+                    daq_protocol.input_config(src)
+                except ValueError as exc:
+                    problems.append(f"{label}: {exc}")
         for (cid, ext), spans in usage.items():
             spans.sort()
             for (s1, l1, n1), (s2, l2, n2) in zip(spans, spans[1:]):

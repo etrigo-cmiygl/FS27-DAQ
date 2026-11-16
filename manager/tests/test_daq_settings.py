@@ -76,14 +76,66 @@ def test_master_config_is_the_factory_layout(cfg):
 
 def test_config_the_daq_cant_supply_is_reported(cfg):
     c = cfg.copy()
-    c.channels.append({"key": "steer", "name": "Steering", "source": {"type": "daq_input", "input": "A0"},
-                       "scale": 1, "radio": "off"})
+    c.channels.append({"key": "steer", "name": "Steering", "scale": 1, "radio": "off",
+                       "source": {"type": "can", "id": "0x500", "byte": 0, "bits": 16}})
     c.data["radio_packet"]["fields"].append({"name": "steer", "channel": "steer", "type": "f32"})
     c.data["screen_frames"][1]["signals"].append({"channel": "steer", "name": "Steer", "byte": 4, "bits": 16,
                                                   "scale": 0.1})
     layout, problems = proto.layout_from_config(c)
     assert len(problems) == 2 and all("steer" in p for p in problems)
     assert len(layout["radio"]) == 21
+
+
+def spare_channel(key, inp, **sensor):
+    return {"key": key, "name": key.title(), "group": "Driver", "scale": 1, "units": "", "radio": "off",
+            "screen": False, "source": {"type": "daq_input", "input": inp, **sensor}}
+
+
+def test_sensor_presets_become_the_numbers_the_daq_wants():
+    kind, p0, p1, _, _ = proto.input_config({"input": "X0", "sensor": "linear", "v_min": 0.5, "v_max": 4.5,
+                                             "value_min": 0, "value_max": 100})
+    assert kind == proto.IN_LINEAR and abs(proto.input_convert((kind, p0, p1, 0, 0), 2.5) - 50.0) < 1e-4
+    assert abs(proto.input_convert((kind, p0, p1, 0, 0), 0.5)) < 1e-4
+    divided = proto.input_config({"input": "A1", "sensor": "linear", "v_min": 0.5, "v_max": 4.5, "value_min": 0,
+                                  "value_max": 100, "divider": 1.5})
+    assert abs(proto.input_convert(divided, 3.0) - 100.0) < 1e-3
+    ntc = proto.input_config({"input": "A0", "sensor": "thermistor", "pullup": 10000, "r25": 10000, "beta": 3950,
+                              "supply": 3.3})
+    assert ntc[0] == proto.IN_THERMISTOR and abs(proto.input_convert(ntc, 1.65) - 25.0) < 0.01
+    assert abs(proto.input_convert(ntc, 0.3) - 87.72) < 0.2
+    assert proto.input_convert(ntc, 3.3) == -50.0 and proto.input_convert(ntc, 0.0) == 250.0
+    wheel = proto.input_config({"input": "F0", "sensor": "wheel_speed", "teeth": 20, "circumference_m": 1.6})
+    assert abs(proto.input_convert(wheel, 100.0) - 28.8) < 1e-4
+    assert proto.input_config({"input": "F1", "sensor": "frequency", "per_hz": 3})[:2] == (proto.IN_LINEAR, 3.0)
+    assert proto.input_config({"input": "A2"}) == (proto.IN_LINEAR, 1.0, 0.0, 0.0, 0.0)
+    for bad, word in (({"input": "A9"}, "isn't a DAQ input"), ({"input": "F0", "sensor": "thermistor"}, "can't take"),
+                      ({"input": "A0", "sensor": "wheel_speed"}, "can't take"),
+                      ({"input": "A0", "sensor": "linear"}, "only reads up to 3.3"),
+                      ({"input": "X0", "sensor": "linear", "v_min": 1, "v_max": 1}, "different"),
+                      ({"input": "X0", "sensor": "thermistor", "beta": 0}, "above 0"),
+                      ({"input": "F0", "sensor": "wheel_speed", "teeth": 0}, "above 0"),
+                      ({"input": "X0", "sensor": "linear", "v_min": "abc"}, "numbers")):
+        with pytest.raises(ValueError, match=word):
+            proto.input_config(bad)
+
+
+def test_spare_inputs_in_the_config(cfg):
+    c = cfg.copy()
+    c.channels.append(spare_channel("brake_front", "X0", sensor="linear", v_min=0.5, v_max=4.5, value_min=0,
+                                    value_max=100))
+    c.channels.append(spare_channel("gearbox_temp", "A0", sensor="thermistor"))
+    c.channels.append(spare_channel("wheel_fl_hz", "F0", sensor="wheel_speed", teeth=20, circumference_m=1.6))
+    assert c.validate() == []
+    c.data["radio_packet"]["fields"].append({"name": "brake_front", "channel": "brake_front", "type": "f32"})
+    layout, problems = proto.layout_from_config(c)
+    assert problems == [] and layout["radio"][-1] == (63, 6)
+    assert [i[0] for i in layout["inputs"]] == [2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+    assert proto.source_number(c, "gearbox_temp") == 60 and proto.source_number(c, "wheel_fl_hz") == 71
+    c.channels.append(spare_channel("clash", "X0", sensor="linear", v_min=0, v_max=5))
+    c.channels.append(spare_channel("wrong", "F1", sensor="thermistor"))
+    _, problems = proto.layout_from_config(c)
+    assert len(problems) == 2 and "used by both" in problems[0] and "can't take" in problems[1]
+    assert any("can't take" in p for p in c.validate())
 
 
 SCRIPT = [
@@ -100,11 +152,22 @@ SCRIPT = [
     ("GM,RP,0,1/9", 0, 0), ("GM,RPN,0", 0, 0), ("GM,RPN,99", 0, 0), ("GM,RPN,40", 0, 0), ("GM,SAVE", 0, 0),
     ("GM,CANCEL", 0, 0), ("GM,GET", 0, 0), ("GM,FACTORY", 0, 0), ("GM,GET", 0, 0), ("GM,GETL", 0, 0),
     ("GM,SF,0,0", 0, 0), ("GM,SF,1,0", 0, 0), ("GM,GETL", 0, 0), ("GM,CANCEL", 0, 0),
+    ("GM,GETI", 0, 0), ("GM,IN,0,1,25,-12.5,0,0", 0, 0), ("GM,IN,5,2,10000,10000,3950,5", 0, 0),
+    ("GM,IN,11,1,0.288,0,0,0", 0, 0), ("GM,IN,11,2,10000,10000,3950,5", 0, 0), ("GM,IN,1,2,10000,10000,0,5", 0, 0),
+    ("GM,IN,15,1,1,0,0,0", 0, 0), ("GM,IN,0,3,1,0,0,0", 0, 0), ("GM,IN,0,1,1,0,0", 0, 0), ("GM,IN,0,1,nan,0,0,0", 0, 0),
+    ("GM,IN,0,1,inf,0,0,0", 0, 0), ("GM,IN,0,1,x,0,0,0", 0, 0), ("GM,IN,2,1,1e40,0,0,0", 0, 0), ("GM,IN", 0, 0),
+    ("GM,IN,1,1,1,0,0,0", 900, 0), ("GM,GET", 0, 0), ("GM,SF,4,604,60/0/16/0/1/10,71/2/16/0/1/10", 0, 0),
+    ("GM,RP,21,60/6,65/3,75/0", 0, 0), ("GM,RP,21,60/6,65/3", 0, 0), ("GM,RPN,23", 0, 0), ("GM,SAVE", 0, 0),
+    ("GM,GETL", 0, 0), ("GM,GETI", 0, 0), ("GM,GET", 0, 0), ("GM,IN,5,0,0,0,0,0", 0, 0), ("GM,GETL", 0, 0),
+    ("GM,FACTORY", 0, 0), ("GM,GETL", 0, 0), ("GM,GET", 0, 0),
 ]
 
 
 def test_simulated_daq_answers_exactly_like_the_real_firmware_code(firmware):
     sim = DaqSim()
+    sim.spare_raw[0], sim.spare_raw[11], sim.spare_fitted = 2.5, 100.0, 1
+    for line in ("!raw=0,2.5", "!raw=11,100", "!fitted=1"):
+        firmware.send(line)
     for body, rpm, speed in SCRIPT:
         line = proto.build_line(*body.split(",")[1:2], *body.split(",")[2:])
         assert line == "$" + body + "*" + proto.checksum(body)
@@ -139,6 +202,29 @@ def test_app_layout_commands_load_into_the_real_firmware(firmware, cfg):
     assert proto.same_layout(got, custom) and not proto.same_layout(got, layout)
     packet = firmware.send("!packet")[0]
     assert packet.startswith("3732534602") and len(packet) == 2 * (5 + 64 + 2)
+    assert proto.parse_line(firmware.handle(proto.build_line("FACTORY"))[0])[0] == "OK"
+
+    c.channels.append(spare_channel("brake_front", "X0", sensor="linear", v_min=0.5, v_max=4.5, value_min=0,
+                                    value_max=100))
+    c.channels.append(spare_channel("gearbox_temp", "A0", sensor="thermistor"))
+    c.channels.append(spare_channel("wheel_fl", "F0", sensor="wheel_speed", teeth=20, circumference_m=1.6))
+    c.data["radio_packet"]["fields"].append({"name": "brake_front", "channel": "brake_front", "type": "f32"})
+    c.data["screen_frames"][-1]["signals"].append({"channel": "wheel_fl", "name": "WheelFL", "byte": 4, "bits": 16,
+                                                   "signed": False, "scale": 0.1})
+    spare, problems = proto.layout_from_config(c)
+    assert problems == []
+    for line in proto.layout_commands(spare) + [proto.build_line("SAVE")]:
+        assert proto.parse_line(firmware.handle(line)[-1])[0] == "OK", line
+    got = proto.parse_layout([proto.parse_line(r) for r in firmware.handle(proto.build_line("GETL"))])
+    assert proto.same_layout(got, spare) and not proto.same_layout(got, custom)
+    for line in ("!raw=3,2.5", "!raw=0,1.65", "!raw=11,100", "!fitted=3"):
+        firmware.send(line)
+    live = proto.parse_line(firmware.handle(proto.build_line("GETI"))[0])[1]
+    assert live[0] == "3" and abs(float(live[1]) - 25.0) < 0.01 and float(live[4]) == 50.0
+    assert abs(float(live[12]) - 28.8) < 1e-4
+    packet = bytes.fromhex(firmware.send("!packet")[0])
+    import struct
+    assert struct.unpack("<f", packet[5 + 64 + 2:5 + 64 + 6])[0] == 50.0
     assert proto.parse_line(firmware.handle(proto.build_line("FACTORY"))[0])[0] == "OK"
 
 

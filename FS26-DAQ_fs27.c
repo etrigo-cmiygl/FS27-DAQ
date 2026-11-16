@@ -11,6 +11,7 @@
 #include "pico/flash.h"
 #include "hardware/sync.h"
 #include "daq_settings_fs27.h"
+#include "daq_inputs_fs27.h"
 #include "daq_flash_fs27.h"
 
 // Global mutex for printf
@@ -48,6 +49,7 @@ static void gather_inputs(daq_inputs_t* in) {
     in->fix_valid = gps.fix_valid;
     in->tx_count = lora_get_tx_count();
     in->can_frame_count = can_get_frame_count();
+    daq_spare_read(in->spare_raw, &in->spare_fitted);
 }
 
 // Core 1 takes its own copy. Interrupts are off for the copy so a settings save
@@ -160,6 +162,7 @@ int main() {
     
     // Load the saved settings (or the factory ones) before anything uses them
     settings_start();
+    daq_spare_init();
 
     // Initialize GPS module on core 0
     gps_init();
@@ -194,6 +197,9 @@ int main() {
         
         // 3. Settings requests from Gryphon Manager over USB
         settings_poll();
+
+        // Spare sensor inputs (ADC pins, the optional ADS1115 boards, frequency pins)
+        daq_spare_poll();
 
         // 4. DASHBOARD BROADCAST (20Hz with factory settings) - send the frames in the settings to the dash via CAN.
         //    Factory settings: 0x600 engine, 0x601 battery + air temp, 0x602 GPS position, 0x603 speed + counters.

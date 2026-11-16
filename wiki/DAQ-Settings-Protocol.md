@@ -25,11 +25,13 @@ $GM,<COMMAND>[,arguments...]*CS
 | --- | --- |
 | `$GM,HELLO*CS` | Are you there, and which protocol? |
 | `$GM,GET*CS` | The simple settings |
-| `$GM,GETL*CS` | The layouts: one `SF` line per screen frame, `RP` lines for the radio packet, `RPN`, then `OK` |
+| `$GM,GETL*CS` | The layouts: one `SF` line per screen frame, `RP` lines for the radio packet, `RPN`, an `IN` line per spare input in use, then `OK` |
 | `$GM,SET,key=value,...*CS` | Change simple settings (pending) |
 | `$GM,SF,<slot>,<id hex>,<signal>,...*CS` | Set screen frame `slot` (0-7). No signals = frame off |
 | `$GM,RP,<start>,<field>,...*CS` | Set radio packet fields from position `start` |
 | `$GM,RPN,<count>*CS` | How many radio fields are in use |
+| `$GM,IN,<input>,<kind>,<p0>,<p1>,<p2>,<p3>*CS` | Set up spare input 0-14 (see Spare inputs) |
+| `$GM,GETI*CS` | The spare inputs' values right now |
 | `$GM,CANCEL*CS` | Throw away pending edits |
 | `$GM,SAVE*CS` | Check, write to flash, start using them |
 | `$GM,FACTORY*CS` | Back to factory settings, saved |
@@ -37,7 +39,8 @@ $GM,<COMMAND>[,arguments...]*CS
 | From the DAQ | Meaning |
 | --- | --- |
 | `$GM,HELLO,fw=FS27-DAQ-2.0,proto=2,settings=<n>,saved=<0 or 1>*CS` | `n` goes up by one on every save. `saved=0` means nothing has been saved to flash yet, so it's running factory settings |
-| `$GM,VAL,gps_hz=5,radio_hz=2,screen_hz=20,layout=1,frames=4,fields=21,packet=68,unsaved=0*CS` | Reply to GET (shows the pending copy) |
+| `$GM,VAL,gps_hz=5,radio_hz=2,screen_hz=20,layout=1,frames=4,fields=21,packet=68,unsaved=0,inputs=0*CS` | Reply to GET (shows the pending copy) |
+| `$GM,INV,<boards>,<v0>,...,<v14>*CS` | Reply to GETI. `boards` bit 0 = the ADS1115 at 0x48 answers, bit 1 = the one at 0x49. Then each input after its scaling |
 | `$GM,OK,settings=<n>*CS` | Done |
 | `$GM,ERR,<reason>*CS` | `checksum`, `format`, `range`, `unknown`, `moving`, `flash` |
 
@@ -79,8 +82,30 @@ Each field is `source/type`. Types: 0 u8, 1 i8, 2 u16, 3 i16, 4 u32, 5 i32, 6 f3
 | 37 | Battery voltage (reads 0 for now) |
 | 40-45 | GPS latitude, longitude, speed, altitude, satellites, fix |
 | 50, 51 | LoRa packets sent, ECU frames decoded |
+| 60-74 | Spare inputs 0-14, after their sensor scaling |
 
 Spare inputs (Pico ADC, ADS1115, frequency) aren't in the firmware yet. They'll get source numbers from 60.
+
+## Spare inputs
+
+| Input | Name | Where | Reads |
+| --- | --- | --- | --- |
+| 0-2 | A0-A2 | Pico pins GP26, GP27, GP28 | 0 to 3.3 V |
+| 3-6 | X0-X3 | ADS1115 at I2C address 0x48, channels 0-3 | 0 to 5 V |
+| 7-10 | X4-X7 | ADS1115 at 0x49, channels 0-3 | 0 to 5 V |
+| 11-14 | F0-F3 | Pico pins GP16, GP17, GP18, GP20 (pull-ups on, rising edges) | Hz |
+
+The ADS1115 boards sit on I2C1: SDA GP2, SCL GP3. They don't have to be fitted. A missing board's inputs read 0 V, the DAQ tries it again every second, and nothing else slows down.
+
+| Kind | Meaning | Numbers |
+| --- | --- | --- |
+| 0 | Off, reads 0 | none |
+| 1 | Straight line: `value = p0 * x + p1`, where x is volts (or Hz on F0-F3) | p0, p1 |
+| 2 | Thermistor to ground with a pull-up (analogue inputs only). Unplugged reads -50, shorted reads 250 | p0 pull-up ohms, p1 ohms at 25 C, p2 beta, p3 pull-up supply volts |
+
+Gryphon Manager's sensor presets turn into these: a 0.5-4.5 V pressure sensor is kind 1, wheel speed is kind 1 on a frequency input with `p0 = tyre circumference x 3.6 / teeth`.
+
+Wiring to check before fitting an ADS1115: the Pico's pins are 3.3 V only, so the I2C pull-ups must go to 3.3 V even if the board is powered from 5 V to read 5 V sensors. Many breakout boards pull SDA/SCL up to their own supply.
 
 ## Safety
 
